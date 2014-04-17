@@ -52,9 +52,15 @@
     <FlexGenerator Include="..\..\gsc_cod9.l">
       <Filter>lex_yacc</Filter>
     </FlexGenerator>
+    <FlexGenerator Include="..\..\c99.l">
+      <Filter>lex_yacc</Filter>
+    </FlexGenerator>
   </ItemGroup>
   <ItemGroup>
     <BisonParser Include="..\..\gsc_cod9.y">
+      <Filter>lex_yacc</Filter>
+    </BisonParser>
+    <BisonParser Include="..\..\c99.y">
       <Filter>lex_yacc</Filter>
     </BisonParser>
   </ItemGroup>

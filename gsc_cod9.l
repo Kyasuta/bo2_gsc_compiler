@@ -12,40 +12,50 @@ P					[a-zA-Z_\\]
 #define fileno _fileno // <stdio.h>
 
 void comment(void);
+int another_opening_square_bracket(void);
+int next_closing_square_bracket(void);
 void invalid_identifier(void);
 void unexpected_character(void);
+
+int lineCount = 1;
 %}
 
 %%
 "/*"				{ comment(); }
-"//"[^\n]*			{ /* consume //-comment */ }
+"//"[^\n]*			{ /* consume //-comment */; }
 
 "#include"			{ return(INCLUDE); }
 "#using_animtree"	{ return(USING_ANIMTREE); }
-"anim"				{ return(ANIM); }
 "break"				{ return(BREAK); }
 "case"				{ return(CASE); }
 "continue"			{ return(CONTINUE); }
 "default"			{ return(DEFAULT); }
 "else"				{ return(ELSE); }
-"false"				{ return(FALSE); }
+"false"				{
+						yylval.intValue = 0;
+						return(INT_LITERAL);
+					}
 "for"				{ return(FOR); }
 "foreach"			{ return(FOREACH); }
 "if"				{ return(IF); }
-"level"				{ return(LEVEL); }
 "return"			{ return(RETURN); }
-"self"				{ return(SELF); }
-"size"				{ return(ARRAY_SIZE); }
 "switch"			{ return(SWITCH); }
 "thread"			{ return(THREAD); }
-"true"				{ return(TRUE); }
+"true"				{
+						yylval.intValue = 1;
+						return(INT_LITERAL);
+					}
 "undefined"			{ return(UNDEFINED); }
+"wait"				{ return(WAIT); }
 "while"				{ return(WHILE); }
 
 					/* invalid identifier e.g 123myVar, we have to throw an error */
 {D}+{L}				{
 						invalid_identifier();
 					}
+
+					/*	if PATH was defined before IDENTIFIER, then the lexer would return the PATH token always
+						when IDENTIFIER has the same size as PATH because its defined first */
 
 					/* identifier e.g. var name, function name... */
 {L}({L}|{D})*		{
@@ -124,10 +134,7 @@ void unexpected_character(void);
 ">="			{ return(GREATER_EQUAL_OP); }
 "=="			{ return(EQUALITY_OP); }
 "!="			{ return(INEQUALITY_OP); }
-"[]"			{ return(EMPTY_ARRAY); }
 "::"			{ return(REFERENCE_FUNC); }
-"[["			{ return(DEREFERENCE_FUNC_START); }
-"]]"			{ return(DEREFERENCE_FUNC_END); }
 "/#"			{ return(DEVBLOCK_START); }
 "#/"			{ return(DEVBLOCK_END); }
 ";"				{ return(';'); }
@@ -138,7 +145,7 @@ void unexpected_character(void);
 "="				{ return('='); }
 "("				{ return('('); }
 ")"				{ return(')'); }
-"["				{ return('['); }
+"["				{ return(another_opening_square_bracket()?DEREFERENCE_FUNC_START:(next_closing_square_bracket()?EMPTY_ARRAY:'[')); }
 "]"				{ return(']'); }
 "."				{ return('.'); }
 "&"				{ return('&'); }
@@ -155,8 +162,8 @@ void unexpected_character(void);
 "|"				{ return('|'); }
 "?"				{ return('?'); }
 
-[ \t]			;
-\n				{ /* test */ return('\n'); }
+[ \t]			{ ; }
+\n				{ lineCount++; }
 .				{ unexpected_character(); }
 
 %%
@@ -178,9 +185,55 @@ void comment(void)
 	{
 		if (c == '/' && prev == '*')
 			return;
+		else if (c == '\n')
+			lineCount++;
 		prev = c;
 	}
 	yyerror("unterminated comment");
+}
+
+int another_opening_square_bracket(void)
+{
+	char c = 0;
+
+#ifdef __cplusplus
+	while ((c = yyinput()) != 0)	/* (EOF maps to 0) */
+#else
+	while ((c = input()) != 0)		/* (EOF maps to 0) */
+#endif
+	{
+		if (c == '[')
+			return 1;
+		else if (c != ' ' && c != '\t' && c != '\n')
+		{
+			unput(c);
+			return 0;
+		}
+	}
+	yyerror("EOF follows after opening square bracket");
+	return 0;
+}
+
+int next_closing_square_bracket(void)
+{
+	char c = 0;
+
+#ifdef __cplusplus
+	while ((c = yyinput()) != 0)	/* (EOF maps to 0) */
+#else
+	while ((c = input()) != 0)		/* (EOF maps to 0) */
+#endif
+	{
+		if (c == ']')
+			return 1;
+		else if (c != ' ' && c != '\t' && c != '\n')
+		{
+			unput(c);
+			return 0;
+		}
+	}
+	yyerror("EOF follows after opening square bracket");
+	return 0;
 }
 
 void invalid_identifier(void)
