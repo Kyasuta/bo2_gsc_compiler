@@ -24,8 +24,8 @@ void yyerror(char const *s);
 %token SWITCH CASE DEFAULT
 %token IF ELSE
 %token FOR WHILE FOREACH
-%token BREAK RETURN CONTINUE WAIT
-%token IDENTIFIER UNDEFINED EMPTY_ARRAY INT_LITERAL FLOAT_LITERAL STRING_LITERAL LOC_STRING_LITERAL HASH_STRING_LITERAL
+%token BREAK RETURN CONTINUE WAIT WAITTILLFRAMEEND
+%token ANIMTREE IDENTIFIER UNDEFINED EMPTY_ARRAY INT_LITERAL FLOAT_LITERAL STRING_LITERAL LOC_STRING_LITERAL HASH_STRING_LITERAL
 %token SHIFT_RIGHT_ASSIGN SHIFT_LEFT_ASSIGN PLUS_ASSIGN MINUS_ASSIGN MULTIPLY_ASSIGN DIVIDE_ASSIGN MOD_ASSIGN BIT_AND_ASSIGN BIT_EX_OR_ASSIGN BIT_OR_ASSIGN
 %token SHIFT_RIGHT_OP SHIFT_LEFT_OP INC_OP DEC_OP LOGICAL_AND_OP LOGICAL_OR_OP LESS_EQUAL_OP GREATER_EQUAL_OP EQUALITY_OP INEQUALITY_OP
 %token THREAD DEREFERENCE_FUNC_START REFERENCE_FUNC DEVBLOCK_START DEVBLOCK_END
@@ -52,12 +52,17 @@ void yyerror(char const *s);
 /* need to add support for parenthesized expressions */
 
 translation_unit
+	: /* empty */
+	| gscSrcStructure
+	;
+
+gscSrcStructure
 	: include
 	| using_animtree
 	| function_definition
-	| translation_unit include
-	| translation_unit using_animtree
-	| translation_unit function_definition
+	| gscSrcStructure include
+	| gscSrcStructure using_animtree
+	| gscSrcStructure function_definition
 	;
 
 include
@@ -79,13 +84,7 @@ parameter_list_opt
 	;
 
 vector_literal
-	: '(' vector_valid_member ',' vector_valid_member ',' vector_valid_member ')'
-	;
-
-/* things that are syntactically valid to be a member of a vector */
-vector_valid_member
-	: INT_LITERAL
-	| FLOAT_LITERAL
+	: '(' expression ',' expression ',' expression ')'
 	;
 
 /* add function_call_expression inc_or_dec ? */
@@ -104,18 +103,19 @@ inc_or_dec
 function_call_noptr
 	: IDENTIFIER '(' argument_expression_list_opt ')'
 	| PATH REFERENCE_FUNC IDENTIFIER '(' argument_expression_list_opt ')'
+	| IDENTIFIER REFERENCE_FUNC IDENTIFIER '(' argument_expression_list_opt ')'
 	;
 
 /* pointer function call */
 function_call_ptr
-	: DEREFERENCE_FUNC_START func_valid_ptr ']' ']' '(' argument_expression_list_opt ')'
+	: DEREFERENCE_FUNC_START expression ']' ']' '(' argument_expression_list_opt ')'
 	;
 
 /* can it be reduced to 1 expression ? */
 argument_expression_list_opt
 	: /* empty */
-	| func_valid_argument
-	| argument_expression_list_opt ',' func_valid_argument
+	| expression
+	| argument_expression_list_opt ',' expression
 	;
 
 /* non-thread function call */
@@ -142,20 +142,6 @@ func_valid_object
 	| element_selection_expression
 	;
 
-/* things that are syntactically valid to be a pointer of a function */
-func_valid_ptr
-	: IDENTIFIER
-	| function_call_nothrd_expression
-	| array_subscripting_expression
-	| element_selection_expression
-	;
-
-/* things that are syntactically valid to be an argument passed to a function */
-/* inc_or_dec_expression was removed */
-func_valid_argument
-	: operation_expression
-	;
-
 /* Need to add support for more array subscripting expressions */
 array_subscripting_expression
 	: array_valid_name '[' array_valid_subscripting ']'
@@ -167,6 +153,7 @@ array_valid_name
 	| function_call_nothrd_expression
 	| array_subscripting_expression
 	| element_selection_expression
+	| parenthesized_expression
 	;
 
 /* expressions that are syntactically valid to be inside "[" and "]" in a subscript  */
@@ -186,12 +173,16 @@ element_valid_selection
 	| function_call_nothrd_expression
 	| array_subscripting_expression
 	| element_selection_expression
+	| parenthesized_expression
 	;
 
-/* how to add anims? (%) :P */
+func_ref_expression
+	: REFERENCE_FUNC IDENTIFIER
+	| IDENTIFIER REFERENCE_FUNC IDENTIFIER
+	| PATH REFERENCE_FUNC IDENTIFIER
+	;
 
-/* inc_or_dec_expression was removed */
-operation_expression
+expression
 	: IDENTIFIER
 	| INT_LITERAL
 	| FLOAT_LITERAL
@@ -199,57 +190,64 @@ operation_expression
 	| LOC_STRING_LITERAL
 	| HASH_STRING_LITERAL
 	| vector_literal
+	| EMPTY_ARRAY
+	| UNDEFINED
 	| function_call_nothrd_expression
 	| array_subscripting_expression
 	| element_selection_expression
-	| operation_expression LOGICAL_OR_OP operation_expression
-	| operation_expression LOGICAL_AND_OP operation_expression
-	| operation_expression '|' operation_expression
-	| operation_expression '^' operation_expression
-	| operation_expression '&' operation_expression
-	| operation_expression EQUALITY_OP operation_expression
-	| operation_expression INEQUALITY_OP operation_expression
-	| operation_expression '<' operation_expression
-	| operation_expression '>' operation_expression
-	| operation_expression LESS_EQUAL_OP operation_expression
-	| operation_expression GREATER_EQUAL_OP operation_expression
-	| operation_expression SHIFT_LEFT_OP operation_expression
-	| operation_expression SHIFT_RIGHT_OP operation_expression
-	| operation_expression '+' operation_expression
-	| operation_expression '-' operation_expression
-	| operation_expression '*' operation_expression
-	| operation_expression '/' operation_expression
-	| operation_expression '%' operation_expression
-	| '!' operation_expression
-	| '~' operation_expression
-	| '-' operation_expression %prec UNARY_MINUS
+	| func_ref_expression
+	| expression LOGICAL_OR_OP expression
+	| expression LOGICAL_AND_OP expression
+	| expression '|' expression
+	| expression '^' expression
+	| expression '&' expression
+	| expression EQUALITY_OP expression
+	| expression INEQUALITY_OP expression
+	| expression '<' expression
+	| expression '>' expression
+	| expression LESS_EQUAL_OP expression
+	| expression GREATER_EQUAL_OP expression
+	| expression SHIFT_LEFT_OP expression
+	| expression SHIFT_RIGHT_OP expression
+	| expression '+' expression
+	| expression '-' expression
+	| expression '*' expression
+	| expression '/' expression
+	| expression '%' expression
+	| '!' expression
+	| '~' expression
+	| '-' uminus_valid_literal %prec UNARY_MINUS
 	| '%' IDENTIFIER %prec UNARY_ANIMREF
-	| '(' operation_expression ')'
+	| parenthesized_expression
+	;
+
+uminus_valid_literal
+	: INT_LITERAL
+	| FLOAT_LITERAL
+	;
+
+parenthesized_expression
+	: '(' expression ')'
 	;
 
 assignment_expression
-	: operation_valid_lvalue '=' operation_expression
-	| operation_valid_lvalue '=' EMPTY_ARRAY
-	| operation_valid_lvalue PLUS_ASSIGN operation_expression
-	| operation_valid_lvalue MINUS_ASSIGN operation_expression
-	| operation_valid_lvalue MULTIPLY_ASSIGN operation_expression
-	| operation_valid_lvalue DIVIDE_ASSIGN operation_expression
-	| operation_valid_lvalue MOD_ASSIGN operation_expression
-	| operation_valid_lvalue SHIFT_LEFT_ASSIGN operation_expression
-	| operation_valid_lvalue SHIFT_RIGHT_ASSIGN operation_expression
-	| operation_valid_lvalue BIT_AND_ASSIGN operation_expression
-	| operation_valid_lvalue BIT_EX_OR_ASSIGN operation_expression
-	| operation_valid_lvalue BIT_OR_ASSIGN operation_expression
+	: operation_valid_lvalue '=' expression
+	| operation_valid_lvalue PLUS_ASSIGN expression
+	| operation_valid_lvalue MINUS_ASSIGN expression
+	| operation_valid_lvalue MULTIPLY_ASSIGN expression
+	| operation_valid_lvalue DIVIDE_ASSIGN expression
+	| operation_valid_lvalue MOD_ASSIGN expression
+	| operation_valid_lvalue SHIFT_LEFT_ASSIGN expression
+	| operation_valid_lvalue SHIFT_RIGHT_ASSIGN expression
+	| operation_valid_lvalue BIT_AND_ASSIGN expression
+	| operation_valid_lvalue BIT_EX_OR_ASSIGN expression
+	| operation_valid_lvalue BIT_OR_ASSIGN expression
 	;
 
 operation_valid_lvalue
 	: IDENTIFIER
 	| array_subscripting_expression
 	| element_selection_expression
-	;
-
-expression
-	: operation_expression
 	;
 
 statement
@@ -264,9 +262,9 @@ statement
 
 /* special statement lists that are for switch & loops only (special keywords: case, default, break, continue) */
 labeled_statement
-	: CASE INT_LITERAL ':' statement
-	| CASE STRING_LITERAL ':' statement
-	| DEFAULT ':' statement
+	: CASE INT_LITERAL ':'
+	| CASE STRING_LITERAL ':'
+	| DEFAULT ':'
 	;
 
 jump_statement
@@ -277,61 +275,60 @@ jump_statement
 	;
 
 wait_statement
-	: WAIT INT_LITERAL ';'
-	| WAIT FLOAT_LITERAL ';'
-	| WAIT '(' INT_LITERAL ')' ';'
-	| WAIT '(' FLOAT_LITERAL ')' ';'
+	: WAIT expression ';'
+	| WAITTILLFRAMEEND ';'
 	;
 
-loop_init_value
-	: ';'
-	| operation_valid_lvalue '=' operation_expression ';'
+for_init_value_opt
+	: /* empty */
+	| operation_valid_lvalue '=' expression
 	;
 
-loop_condition
-	: ';'
-	| operation_expression ';'
+for_condition_opt
+	: /* empty */
+	| expression
 	;
 
-loop_modify_value
+for_modify_value_opt
 	: /* empty */
 	| inc_or_dec_expression
 	| assignment_expression
 	;
 
-/* not putting operation_expression here because it doesn't do anything */
+/* not putting expression here because it doesn't do anything */
 expression_statement
-	: inc_or_dec_expression ';'
+	: ';'
+	| inc_or_dec_expression ';'
 	| function_call_nothrd_expression ';'
 	| function_call_thrd_expression ';'
 	| assignment_expression ';'
-	| operation_valid_lvalue '=' UNDEFINED ';' /* special undefined case */
 	;
 
 compound_statement
 	: '{' '}'
-	| '{' block_item_list '}'
+	| '{' statement_list '}'
 	;
 
-block_item_list
+statement_list
 	: statement
-	| block_item_list statement
+	| statement_list statement
 	;
 
 selection_statement
 	: IF '(' expression ')' statement %prec IFX
 	| IF '(' expression ')' statement ELSE statement
-	| SWITCH '(' expression ')' compound_statement /* forcing this one to have curly brackets */
+	| SWITCH '(' expression ')' compound_statement
 	;
 
 iteration_statement
 	: WHILE '(' expression ')' statement
-	| FOR '(' loop_init_value loop_condition loop_modify_value ')' statement
+	| FOR '(' for_init_value_opt ';' for_condition_opt ';' for_modify_value_opt ')' statement
 	;
 
 %%
 
 void yyerror(char const *s)
 {
-	printf("error: %s\nat line %d", s, lineCount);
+	printf("error: %s\nat line %d\n", s, lineCount);
+	system("pause");
 }

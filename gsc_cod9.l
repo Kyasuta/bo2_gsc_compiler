@@ -26,6 +26,10 @@ int lineCount = 1;
 
 "#include"			{ return(INCLUDE); }
 "#using_animtree"	{ return(USING_ANIMTREE); }
+"#animtree"			{
+						yylval.intValue = -1; // i think this is right
+						return(INT_LITERAL);
+					}
 "break"				{ return(BREAK); }
 "case"				{ return(CASE); }
 "continue"			{ return(CONTINUE); }
@@ -47,6 +51,7 @@ int lineCount = 1;
 					}
 "undefined"			{ return(UNDEFINED); }
 "wait"				{ return(WAIT); }
+"waittillframeend"	{ return(WAITTILLFRAMEEND); }
 "while"				{ return(WHILE); }
 
 					/* invalid identifier e.g 123myVar, we have to throw an error */
