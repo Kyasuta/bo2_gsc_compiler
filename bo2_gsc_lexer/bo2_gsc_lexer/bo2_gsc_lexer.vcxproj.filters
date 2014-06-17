@@ -41,26 +41,20 @@
     <ClCompile Include="bo2_gsc_lexer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="lex.yy.c">
-      <Filter>lex_yacc</Filter>
-    </ClCompile>
     <ClCompile Include="compiler_helper.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="lex.yy.cpp">
+      <Filter>lex_yacc</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FlexGenerator Include="..\..\gsc_cod9.l">
       <Filter>lex_yacc</Filter>
     </FlexGenerator>
-    <FlexGenerator Include="..\..\c99.l">
-      <Filter>lex_yacc</Filter>
-    </FlexGenerator>
   </ItemGroup>
   <ItemGroup>
     <BisonParser Include="..\..\gsc_cod9.y">
-      <Filter>lex_yacc</Filter>
-    </BisonParser>
-    <BisonParser Include="..\..\c99.y">
       <Filter>lex_yacc</Filter>
     </BisonParser>
   </ItemGroup>

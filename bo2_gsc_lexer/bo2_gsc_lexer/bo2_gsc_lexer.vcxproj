@@ -108,7 +108,7 @@
   <ItemGroup>
     <ClCompile Include="bo2_gsc_lexer.cpp" />
     <ClCompile Include="compiler_helper.cpp" />
-    <ClCompile Include="lex.yy.c">
+    <ClCompile Include="lex.yy.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="stdafx.cpp">
@@ -117,24 +117,14 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <FlexGenerator Include="..\..\c99.l">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-    </FlexGenerator>
     <FlexGenerator Include="..\..\gsc_cod9.l">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</ExcludedFromBuild>
       <ScannerPrefix Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
       </ScannerPrefix>
+      <OutputFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">lex.yy.cpp</OutputFile>
     </FlexGenerator>
   </ItemGroup>
   <ItemGroup>
-    <BisonParser Include="..\..\c99.y">
-      <FilePrefix Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-      </FilePrefix>
-      <OutputFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">y.tab.h</OutputFile>
-      <RenameExternalSymbols Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-      </RenameExternalSymbols>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-    </BisonParser>
     <BisonParser Include="..\..\gsc_cod9.y">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</ExcludedFromBuild>
       <FilePrefix Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">

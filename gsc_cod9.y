@@ -1,16 +1,11 @@
 %{
 #include <stdio.h>
+#include <vector>
+#include "compiler_helper.h"
 
-#ifdef __cplusplus
-extern "C"
-{
-	int lineCount;
-	int yylex(void);
-}
-#else
-int lineCount;
+extern int lineCount;
 int yylex(void);
-#endif
+
 void yyerror(char const *s);
 %}
 
@@ -18,18 +13,33 @@ void yyerror(char const *s);
 	int intValue;
 	float floatValue;
 	char* stringValue;
+	std::vector<char*>* stringArrayValue;
+	std::vector<sExpression*>* expressionArrayValue;
+	sExpression* sExpressionValue;
+	sArgumentList* sArgumentListValue;
 }
 
-%token INCLUDE PATH USING_ANIMTREE
-%token SWITCH CASE DEFAULT
-%token IF ELSE
-%token FOR WHILE FOREACH
-%token BREAK RETURN CONTINUE WAIT WAITTILLFRAMEEND
-%token ANIMTREE IDENTIFIER UNDEFINED EMPTY_ARRAY INT_LITERAL FLOAT_LITERAL STRING_LITERAL LOC_STRING_LITERAL HASH_STRING_LITERAL
+/* keyword tokens */
+%token INCLUDE USING_ANIMTREE THREAD SWITCH CASE DEFAULT
+%token IF ELSE FOR WHILE FOREACH IN BREAK RETURN CONTINUE
+%token WAIT WAITTILLFRAMEEND UNDEFINED
+
+/* other tokens */
 %token SHIFT_RIGHT_ASSIGN SHIFT_LEFT_ASSIGN PLUS_ASSIGN MINUS_ASSIGN MULTIPLY_ASSIGN DIVIDE_ASSIGN MOD_ASSIGN BIT_AND_ASSIGN BIT_EX_OR_ASSIGN BIT_OR_ASSIGN
 %token SHIFT_RIGHT_OP SHIFT_LEFT_OP INC_OP DEC_OP LOGICAL_AND_OP LOGICAL_OR_OP LESS_EQUAL_OP GREATER_EQUAL_OP EQUALITY_OP INEQUALITY_OP
-%token THREAD DEREFERENCE_FUNC_START REFERENCE_FUNC DEVBLOCK_START DEVBLOCK_END
+%token DEREFERENCE_FUNC_START REFERENCE_FUNC DEVBLOCK_START DEVBLOCK_END EMPTY_ARRAY
 
+/* token & nonterminal types */
+%token <intValue> INT_LITERAL
+%token <floatValue> FLOAT_LITERAL
+%token <stringValue> IDENTIFIER PATH STRING_LITERAL LOC_STRING_LITERAL HASH_STRING_LITERAL
+
+%type <stringArrayValue> parameter_list_opt
+%type <expressionArrayValue> argument_list_opt
+%type <intValue> inc_or_dec
+%type <sExpressionValue> expression parenthesized_expression
+
+/* precedences (shift/reduce conflict resolving) */
 %nonassoc IFX
 %nonassoc ELSE
 
@@ -45,6 +55,7 @@ void yyerror(char const *s);
 %left '*' '/' '%'
 %right '!' '~' UNARY_MINUS UNARY_ANIMREF
 
+/* starting rule */
 %start translation_unit
 
 %%
@@ -53,113 +64,103 @@ void yyerror(char const *s);
 
 translation_unit
 	: /* empty */
-	| gscSrcStructure
+	| source_code
 	;
 
-gscSrcStructure
+source_code
 	: include
 	| using_animtree
-	| function_definition
-	| gscSrcStructure include
-	| gscSrcStructure using_animtree
-	| gscSrcStructure function_definition
+	| func_definition
+	| source_code include
+	| source_code using_animtree
+	| source_code func_definition
 	;
 
 include
-	: INCLUDE PATH ';'
+	: INCLUDE PATH ';'											{ AddInclude($2); }
+	| INCLUDE IDENTIFIER ';'									{ AddInclude($2); }
 	;
 
 using_animtree
-	: USING_ANIMTREE '(' STRING_LITERAL ')' ';'
+	: USING_ANIMTREE '(' STRING_LITERAL ')' ';'					{ AddUsingAnimTree($3); }
 	;
 
-function_definition
-	: IDENTIFIER '(' parameter_list_opt ')' compound_statement
+func_definition
+	: IDENTIFIER '(' parameter_list_opt ')' compound_statement	{ /* AddFuncDefinition($1, $3, $5); */ }
 	;
 
 parameter_list_opt
-	: /* empty */
-	| IDENTIFIER
-	| parameter_list_opt ',' IDENTIFIER
+	: /* empty */												{ $$ = 0; }
+	| IDENTIFIER												{ $$ = new std::vector<char*>(1, $1); }
+	| parameter_list_opt ',' IDENTIFIER							{ $$ = $1; $$->push_back($3); }
 	;
 
-vector_literal
-	: '(' expression ',' expression ',' expression ')'
-	;
-
-/* add function_call_expression inc_or_dec ? */
+/* add func_call_expression inc_or_dec ? */
 inc_or_dec_expression
-	: IDENTIFIER inc_or_dec
-	| array_subscripting_expression inc_or_dec
-	| element_selection_expression inc_or_dec
+	: IDENTIFIER inc_or_dec										{ /* $$ = CreateIncOrDecExpression(); */ }
+	| array_subscripting_expression inc_or_dec					{ /* $$ = CreateIncOrDecExpression(); */ }
+	| element_selection_expression inc_or_dec					{ /* $$ = CreateIncOrDecExpression(); */ }
 	;
 
 inc_or_dec
-	: INC_OP
-	| DEC_OP
+	: INC_OP													{ $$ = 0; }
+	| DEC_OP													{ $$ = 1; }
 	;
 
 /* non-pointer function call */
-function_call_noptr
-	: IDENTIFIER '(' argument_expression_list_opt ')'
-	| PATH REFERENCE_FUNC IDENTIFIER '(' argument_expression_list_opt ')'
-	| IDENTIFIER REFERENCE_FUNC IDENTIFIER '(' argument_expression_list_opt ')'
+func_call_noptr
+	: IDENTIFIER '(' argument_list_opt ')'
+	| PATH REFERENCE_FUNC IDENTIFIER '(' argument_list_opt ')'
+	| IDENTIFIER REFERENCE_FUNC IDENTIFIER '(' argument_list_opt ')'
 	;
 
 /* pointer function call */
-function_call_ptr
-	: DEREFERENCE_FUNC_START expression ']' ']' '(' argument_expression_list_opt ')'
+func_call_ptr
+	: DEREFERENCE_FUNC_START expression ']' ']' '(' argument_list_opt ')'
 	;
 
-/* can it be reduced to 1 expression ? */
-argument_expression_list_opt
-	: /* empty */
-	| expression
-	| argument_expression_list_opt ',' expression
+argument_list_opt
+	: /* empty */												{ $$ = 0; }
+	| expression												{ $$ = new std::vector<sExpression*>(1, $1); }
+	| argument_list_opt ',' expression							{ $$ = $1; $$->push_back($3); }
 	;
 
 /* non-thread function call */
-function_call_nothrd_expression
-	: function_call_noptr
-	| function_call_ptr
-	| func_valid_object function_call_noptr
-	| func_valid_object function_call_ptr
+func_call_nothrd_expression
+	: func_call_noptr
+	| func_call_ptr
+	| func_valid_object func_call_noptr
+	| func_valid_object func_call_ptr
 	;
 
 /* thread function call */
-function_call_thrd_expression
-	: THREAD function_call_noptr
-	| THREAD function_call_ptr
-	| func_valid_object THREAD function_call_noptr
-	| func_valid_object THREAD function_call_ptr
+func_call_thrd_expression
+	: THREAD func_call_noptr
+	| THREAD func_call_ptr
+	| func_valid_object THREAD func_call_noptr
+	| func_valid_object THREAD func_call_ptr
 	;
 
 /* things that are syntactically valid to be a function's method object */
 func_valid_object
 	: IDENTIFIER
-	| function_call_nothrd_expression /* hmm sure? :P */
+	| func_call_nothrd_expression
 	| array_subscripting_expression
 	| element_selection_expression
 	;
 
 /* Need to add support for more array subscripting expressions */
 array_subscripting_expression
-	: array_valid_name '[' array_valid_subscripting ']'
+	: array_valid_name '[' expression ']'
 	;
 
 /* expressions that are syntactically valid to be a name of an array */
 array_valid_name
 	: IDENTIFIER
-	| function_call_nothrd_expression
+	| func_call_nothrd_expression
 	| array_subscripting_expression
 	| element_selection_expression
 	| parenthesized_expression
-	;
-
-/* expressions that are syntactically valid to be inside "[" and "]" in a subscript  */
-/* inc_or_dec_expression was removed */
-array_valid_subscripting
-	: expression
 	;
 
 /* Need to add support for more element selection expressions */
@@ -170,7 +171,7 @@ element_selection_expression
 /* things that are syntactically valid to be selected through "." */
 element_valid_selection
 	: IDENTIFIER
-	| function_call_nothrd_expression
+	| func_call_nothrd_expression
 	| array_subscripting_expression
 	| element_selection_expression
 	| parenthesized_expression
@@ -183,51 +184,47 @@ func_ref_expression
 	;
 
 expression
-	: IDENTIFIER
-	| INT_LITERAL
-	| FLOAT_LITERAL
-	| STRING_LITERAL
-	| LOC_STRING_LITERAL
-	| HASH_STRING_LITERAL
-	| vector_literal
-	| EMPTY_ARRAY
-	| UNDEFINED
-	| function_call_nothrd_expression
-	| array_subscripting_expression
-	| element_selection_expression
-	| func_ref_expression
-	| expression LOGICAL_OR_OP expression
-	| expression LOGICAL_AND_OP expression
-	| expression '|' expression
-	| expression '^' expression
-	| expression '&' expression
-	| expression EQUALITY_OP expression
-	| expression INEQUALITY_OP expression
-	| expression '<' expression
-	| expression '>' expression
-	| expression LESS_EQUAL_OP expression
-	| expression GREATER_EQUAL_OP expression
-	| expression SHIFT_LEFT_OP expression
-	| expression SHIFT_RIGHT_OP expression
-	| expression '+' expression
-	| expression '-' expression
-	| expression '*' expression
-	| expression '/' expression
-	| expression '%' expression
-	| '!' expression
-	| '~' expression
-	| '-' uminus_valid_literal %prec UNARY_MINUS
-	| '%' IDENTIFIER %prec UNARY_ANIMREF
-	| parenthesized_expression
-	;
-
-uminus_valid_literal
-	: INT_LITERAL
-	| FLOAT_LITERAL
+	: IDENTIFIER												{ $$ = CreateExpression(TYPE_EXPR_IDENTIFIER, $1); }
+	| INT_LITERAL												{ $$ = CreateExpression(TYPE_EXPR_INT, $1); }
+	| FLOAT_LITERAL												{ $$ = CreateExpression(TYPE_EXPR_FLOAT, $1); }
+	| STRING_LITERAL											{ $$ = CreateExpression(TYPE_EXPR_STRING, $1); }
+	| LOC_STRING_LITERAL										{ $$ = CreateExpression(TYPE_EXPR_LOC_STRING, $1); }
+	| HASH_STRING_LITERAL										{ $$ = CreateExpression(TYPE_EXPR_HASH_STRING, $1); }
+	| '(' expression ',' expression ',' expression ')'			{ $$ = CreateExpression(TYPE_EXPR_VECTOR, $2, $4, $6); }
+	| EMPTY_ARRAY												{ $$ = CreateExpression(TYPE_EXPR_EMPTY_ARRAY); }
+	| UNDEFINED													{ $$ = CreateExpression(TYPE_EXPR_UNDEFINED); }
+	| func_call_nothrd_expression								{ $$ = CreateExpression(TYPE_EXPR_FUNC_CALL_NOTHRD); }
+	| array_subscripting_expression								{ $$ = CreateExpression(TYPE_EXPR_ARRAY_SUBSCRIPTING); }
+	| element_selection_expression								{ $$ = CreateExpression(TYPE_EXPR_ELEMENT_SELECTION); }
+	| func_ref_expression										{ $$ = CreateExpression(TYPE_EXPR_FUNC_REF); }
+	| expression LOGICAL_OR_OP expression						{ $$ = CreateExpression(TYPE_EXPR_LOGICAL_OR_OP, $1, $3); }
+	| expression LOGICAL_AND_OP expression						{ $$ = CreateExpression(TYPE_EXPR_LOGICAL_AND_OP, $1, $3); }
+	| expression '|' expression									{ $$ = CreateExpression(TYPE_EXPR_BIT_OR_OP, $1, $3); }
+	| expression '^' expression									{ $$ = CreateExpression(TYPE_EXPR_BIT_EX_OR_OP, $1, $3); }
+	| expression '&' expression									{ $$ = CreateExpression(TYPE_EXPR_BIT_AND_OP, $1, $3); }
+	| expression EQUALITY_OP expression							{ $$ = CreateExpression(TYPE_EXPR_EQUALITY_OP, $1, $3); }
+	| expression INEQUALITY_OP expression						{ $$ = CreateExpression(TYPE_EXPR_INEQUALITY_OP, $1, $3); }
+	| expression '<' expression									{ $$ = CreateExpression(TYPE_EXPR_LESS_OP, $1, $3); }
+	| expression '>' expression									{ $$ = CreateExpression(TYPE_EXPR_GREATER_OP, $1, $3); }
+	| expression LESS_EQUAL_OP expression						{ $$ = CreateExpression(TYPE_EXPR_LESS_EQUAL_OP, $1, $3); }
+	| expression GREATER_EQUAL_OP expression					{ $$ = CreateExpression(TYPE_EXPR_GREATER_EQUAL_OP, $1, $3); }
+	| expression SHIFT_LEFT_OP expression						{ $$ = CreateExpression(TYPE_EXPR_SHIFT_LEFT_OP, $1, $3); }
+	| expression SHIFT_RIGHT_OP expression						{ $$ = CreateExpression(TYPE_EXPR_SHIFT_RIGHT_OP, $1, $3); }
+	| expression '+' expression									{ $$ = CreateExpression(TYPE_EXPR_PLUS_OP, $1, $3); }
+	| expression '-' expression									{ $$ = CreateExpression(TYPE_EXPR_MINUS_OP, $1, $3); }
+	| expression '*' expression									{ $$ = CreateExpression(TYPE_EXPR_MULTIPLY_OP, $1, $3); }
+	| expression '/' expression									{ $$ = CreateExpression(TYPE_EXPR_DIVIDE_OP, $1, $3); }
+	| expression '%' expression									{ $$ = CreateExpression(TYPE_EXPR_MOD_OP, $1, $3); }
+	| '!' expression											{ $$ = CreateExpression(TYPE_EXPR_BOOL_NOT_OP, $2); }
+	| '~' expression											{ $$ = CreateExpression(TYPE_EXPR_BOOL_COMPLEMENT_OP, $2); }
+	| '-' INT_LITERAL %prec UNARY_MINUS							{ $$ = CreateExpression(TYPE_EXPR_UMINUS_INT_OP, $2); }
+	| '-' FLOAT_LITERAL %prec UNARY_MINUS						{ $$ = CreateExpression(TYPE_EXPR_UMINUS_FLOAT_OP, $2); }
+	| '%' IDENTIFIER %prec UNARY_ANIMREF						{ $$ = CreateExpression(TYPE_EXPR_UANIMREF_OP, $2); }
+	| parenthesized_expression									{ $$ = $1; }
 	;
 
 parenthesized_expression
-	: '(' expression ')'
+	: '(' expression ')'										{ $$ = $2; }
 	;
 
 assignment_expression
@@ -281,7 +278,7 @@ wait_statement
 
 for_init_value_opt
 	: /* empty */
-	| operation_valid_lvalue '=' expression
+	| assignment_expression
 	;
 
 for_condition_opt
@@ -299,8 +296,8 @@ for_modify_value_opt
 expression_statement
 	: ';'
 	| inc_or_dec_expression ';'
-	| function_call_nothrd_expression ';'
-	| function_call_thrd_expression ';'
+	| func_call_nothrd_expression ';'
+	| func_call_thrd_expression ';'
 	| assignment_expression ';'
 	;
 
@@ -321,8 +318,9 @@ selection_statement
 	;
 
 iteration_statement
-	: WHILE '(' expression ')' statement
-	| FOR '(' for_init_value_opt ';' for_condition_opt ';' for_modify_value_opt ')' statement
+	: FOR '(' for_init_value_opt ';' for_condition_opt ';' for_modify_value_opt ')' statement
+	| WHILE '(' expression ')' statement
+	| FOREACH '(' IDENTIFIER IN expression ')' statement
 	;
 
 %%

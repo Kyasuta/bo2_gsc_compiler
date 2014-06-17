@@ -5,14 +5,11 @@
 
 using namespace std;
 
-extern "C"
-{
-	extern int lineCount;
-	extern int yydebug;
+extern int lineCount;
+extern int yydebug;
 
-	extern FILE* yyin;
-	extern int yyparse();
-}
+extern FILE* yyin;
+extern int yyparse();
 
 void recursive_yyparse(char* dir)
 {
@@ -85,21 +82,22 @@ int main(int argc, char* argv[])
 	yydebug = 1;
 
 	// create a stderr log
-	/*FILE* stderrlog = NULL;
-	freopen_s(&stderrlog, "C:\\Users\\Ignacio\\Documents\\GitHub\\bo2_gsc_compiler\\bo2_gsc_lexer\\Release\\stderr.log", "w", stderr);*/
+	FILE* stderrlog = NULL;
+	freopen_s(&stderrlog, "C:\\Users\\Ignacio\\Documents\\GitHub\\bo2_gsc_compiler\\bo2_gsc_lexer\\Release\\stderr.log", "w", stderr);
 
-	// loop through the raw bo1 folder
-	/*FILE* inputFile = NULL;
+	FILE* inputFile = NULL;
 	fopen_s(&inputFile, "C:\\Users\\Ignacio\\Documents\\GitHub\\bo2_gsc_compiler\\bo2_gsc_lexer\\Release\\script_parse_test.gsc", "r");
-	yyin = inputFile;*/
+	yyin = inputFile;
 
 	// parse the game script
-	recursive_yyparse("E:\\Program Files (x86)\\Steam\\steamapps\\common\\call of duty black ops\\raw\\*");
-	//yyparse();
+	// loop through the raw bo1 folder to parse the game scripts
+	//recursive_yyparse("E:\\Program Files (x86)\\Steam\\steamapps\\common\\call of duty black ops\\raw\\*");
+	lineCount = 1;
+	yyparse();
 	cin.get();
 
 	// close both file handles & exit
-	//fclose(inputFile);
-	//fclose(stderrlog);
+	fclose(inputFile);
+	fclose(stderrlog);
 	return 0;
 }

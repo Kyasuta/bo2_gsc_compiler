@@ -10,6 +10,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 
 #include <Windows.h>
+#include <cassert>
 #include <iostream>
 #pragma comment(lib, "Shlwapi.lib")
 #include <Shlwapi.h>
