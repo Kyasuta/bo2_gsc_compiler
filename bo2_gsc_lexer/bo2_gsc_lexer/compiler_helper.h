@@ -5,7 +5,7 @@
 
 // need to add expressions here
 
-struct sStatement;
+/*struct sStatement;
 
 enum EStatementType
 {
@@ -149,17 +149,6 @@ struct sIterationStatement
 	};
 };
 
-struct sFuncDefinition
-{
-	char* functionName;
-
-	int numOfParams;
-	char** paramNames;
-
-	int numOfStatements;
-	sStatement** statements;
-};
-
 struct sStatement
 {
 	EStatementType type;
@@ -173,108 +162,84 @@ struct sStatement
 		sSelectionStatement* selectionStatement;
 		sIterationStatement* iterationStatement;
 	};
-};
-
-/* arrays */
-/*template <class T>
-class DynamicArray
-{
-private:
-	// class variable members
-	T* elementArray;
-	unsigned int elementArraySize;
-	unsigned int elementCount;
-
-public:
-	// element management
-	void AddElement(T element)
-	{
-		if (this->elementArray)
-		{
-			if (this->elementArraySize < sizeof(T) * (this->elementCount + 1))
-			{
-				this->elementArray = (T*)realloc(this->elementArray, sizeof(T) * (this->elementCount + 1));
-				assert(this->elementArray != NULL);
-
-				this->elementArraySize = sizeof(T) * (this->elementCount + 1);
-			}
-			
-			this->elementArray[this->elementCount] = element;
-			this->elementCount++;
-		}
-		else
-		{
-			this->elementArray = (T*)malloc(sizeof(T));
-			assert(this->elementArray != NULL);
-
-			this->elementArraySize = sizeof(T);
-
-			this->elementArray[0] = element;
-			this->elementCount = 1;
-		}
-	}
-
-	void RemoveElement()
-	{
-		if (this->elementArray && this->elementCount > 0)
-			this->elementCount--;
-	}
-
-	T operator[](int index)
-	{
-		assert(index < this->elementCount);
-
-		return this->elementArray[index];
-	}
-
-	// constructor & destructor
-	DynamicArray()
-	{
-		this->elementArray		= 0;
-		this->elementArraySize	= 0;
-		this->elementCount		= 0;
-	}
-	DynamicArray(int elementCountInit, ...)
-	{
-		va_list vl;
-		va_start(vl, elementCountInit);
-
-		this->elementArray	= (T*)malloc(sizeof(T) * elementCountInit);
-		assert(this->elementArray != NULL);
-
-		this->elementArraySize = sizeof(T) * elementCountInit;
-
-		for (int i = 0; i < elementCountInit; i++)
-			this->elementArray[i] = va_arg(vl, T);
-
-		this->elementCount	= elementCountInit;
-
-		va_end(vl);
-	}
-
-	~DynamicArray()
-	{
-		if (this->elementArray)
-			free(this->elementArray);
-	}
 };*/
 
-/* includes & animtrees */
-extern char** includeList;
-extern char** usingAnimTreeList;
-extern int curIncludeCount;
-extern int curUsingAnimTreeCount;
+/* nodes */
 
-void AddInclude(char* filedir);
-void AddUsingAnimTree(char* animtree);
+struct sNode;
 
-/* function definitions */
-/*typedef struct _sFuncDefinition
+enum ENodeType
 {
+	// literals
+	TYPE_IDENTIFIER,
+	TYPE_INT,
+	TYPE_FLOAT,
+	TYPE_STRING,
+	TYPE_LOC_STRING,
+	TYPE_HASH_STRING,
+	TYPE_INCLUDE,
+	TYPE_USINGANIMTREE,
 
-} sFuncDefinition;*/
+	// structs
+	TYPE_FUNC_DEFINITION,
+	TYPE_INC_DEC_EXPRESSION,
+	TYPE_FUNC_CALL,
+	TYPE_ARRAY_SUBSCRIPTING_EXPRESSION,
+	TYPE_ELEMENT_SELECTION_EXPRESSION,
+	TYPE_FUNC_REF_EXPRESSION,
+	TYPE_EXPRESSION
+};
 
-typedef enum _EExpressionType
+struct sFuncDefinition
+{
+	char* funcName;
+	std::vector<char*>* parameterList;
+	//sCompoundStatement* compoundStatement;
+};
+
+struct sIncDecExpression
+{
+	sNode* expression;
+	int isDec;
+};
+
+struct sFuncCall
+{
+	char* funcName;
+	char* gscOfFunc;
+
+	std::vector<sNode*>* argumentList;
+
+	int isPtr;
+	sNode* ptrExpression;
+
+	int isMethod;
+	sNode* methodObject;
+
+	int isThread;
+};
+
+// for example, "level.myVar[self getindex()]", "level.myVar" is the arrayName and "self getindex()" is the index
+struct sArraySubscriptingExpression
+{
+	sNode* arrayName;
+	sNode* index;
+};
+
+// for example, "self getshit().element", "self getshit()" is the selection and "element" is the selectedElement
+struct sElementSelectionExpression
+{
+	sNode* selection;
+	char* selectedElement;
+};
+
+struct sFuncRefExpression
+{
+	char* gscOfFunc;
+	char* funcName;
+};
+
+enum EExpressionType
 {
 	TYPE_EXPR_IDENTIFIER,
 	TYPE_EXPR_INT,
@@ -312,25 +277,53 @@ typedef enum _EExpressionType
 	TYPE_EXPR_UMINUS_INT_OP,
 	TYPE_EXPR_UMINUS_FLOAT_OP,
 	TYPE_EXPR_UANIMREF_OP
-} EExpressionType;
+};
 
-typedef struct _sExpression
+struct sExpression
 {
 	EExpressionType type;
-
 	union
 	{
 		int intValue;
 		float floatValue;
 		char* stringValue;
-		struct _sExpression** expressionList;
+		std::vector<sNode*>* nodeList;
 	};
-} sExpression;
+};
 
-typedef struct _sArgumentList
+struct sNode
 {
-	int numOfArguments;
-	sExpression** expressionList;
-} sArgumentList;
+	ENodeType nodeType;
+	union
+	{
+		// literals
+		int intValue;
+		float floatValue;
+		char* stringValue; // used for TYPE_LOC_STRING_LITERAL and TYPE_HASH_STRING_LITERAL too
 
-sExpression* CreateExpression(EExpressionType type, ...);
+		// structures
+		sFuncDefinition* funcDefinition;
+		sIncDecExpression* incDecExpression;
+		sFuncCall* funcCall;
+		sArraySubscriptingExpression* arraySubscriptingExpression;
+		sElementSelectionExpression* elementSelectionExpression;
+		sFuncRefExpression* funcRefExpression;
+		sExpression* expression;
+	};
+};
+
+/* node allocation */
+sNode* AllocInclude(char* filedir);
+sNode* AllocUsingAnimTree(char* animtree);
+sNode* AllocFuncDefinition(char* funcName, std::vector<char*>* parameterList/*, sCompoundStatement* compoundStatement*/);
+sNode* AllocIncDecExpression(sNode* expression, int isDec);
+sNode* AllocFuncCall(char* funcName, char* gscOfFunc, std::vector<sNode*>* argumentList, int isPtr, sNode* ptrExpression, int isMethod, sNode* methodObject, int isThread);
+sNode* AllocArraySubscriptingExpression(sNode* arrayName, sNode* index);
+sNode* AllocElementSelectionExpression(sNode* selection, char* selectedElement);
+sNode* AllocFuncRefExpression(char* gscOfFunc, char* funcName);
+sNode* AllocExpression(EExpressionType type, ...);
+
+sNode* IdentifierToNode(char* identifier);
+
+/* node freeing */
+void FreeNode(sNode* node);

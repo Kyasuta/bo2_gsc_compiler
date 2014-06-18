@@ -76,6 +76,22 @@ void recursive_yyparse(char* dir)
 	}
 }
 
+void OnParsingComplete(std::vector<sNode*>* sourceCode)
+{
+	sNode* curNode;
+
+	for (std::vector<sNode*>::iterator it = sourceCode->begin(); it < sourceCode->end(); it++)
+	{
+		curNode = *it;
+
+		printf("%d ", curNode->nodeType);
+
+		FreeNode(curNode);
+	}
+	
+	printf("\n");
+}
+
 int main(int argc, char* argv[])
 {
 	// set debug mode so the stderr log is written by bison

@@ -7,16 +7,17 @@ extern int lineCount;
 int yylex(void);
 
 void yyerror(char const *s);
+
+void OnParsingComplete(std::vector<sNode*>* sourceCode);
 %}
 
 %union {
 	int intValue;
 	float floatValue;
 	char* stringValue;
+	sNode* nodeValue;
 	std::vector<char*>* stringArrayValue;
-	std::vector<sExpression*>* expressionArrayValue;
-	sExpression* sExpressionValue;
-	sArgumentList* sArgumentListValue;
+	std::vector<sNode*>* nodeArrayValue;
 }
 
 /* keyword tokens */
@@ -34,10 +35,13 @@ void yyerror(char const *s);
 %token <floatValue> FLOAT_LITERAL
 %token <stringValue> IDENTIFIER PATH STRING_LITERAL LOC_STRING_LITERAL HASH_STRING_LITERAL
 
+%type <nodeValue> include using_animtree func_definition inc_dec_expression func_call_noptr func_call_ptr func_call_nothrd_expression func_call_thrd_expression
+%type <nodeValue> func_valid_object array_valid_name array_subscripting_expression element_selection_expression element_valid_selection func_ref_expression
+%type <nodeValue> expression parenthesized_expression assignment_expression operation_valid_lvalue
+
+%type <intValue> inc_dec
 %type <stringArrayValue> parameter_list_opt
-%type <expressionArrayValue> argument_list_opt
-%type <intValue> inc_or_dec
-%type <sExpressionValue> expression parenthesized_expression
+%type <nodeArrayValue> source_code argument_list_opt
 
 /* precedences (shift/reduce conflict resolving) */
 %nonassoc IFX
@@ -60,33 +64,31 @@ void yyerror(char const *s);
 
 %%
 
-/* need to add support for parenthesized expressions */
-
 translation_unit
 	: /* empty */
-	| source_code
+	| source_code												{ OnParsingComplete($1); }
 	;
 
 source_code
-	: include
-	| using_animtree
-	| func_definition
-	| source_code include
-	| source_code using_animtree
-	| source_code func_definition
+	: include													{ $$ = new std::vector<sNode*>(1, $1); }
+	| using_animtree											{ $$ = new std::vector<sNode*>(1, $1); }
+	| func_definition											{ $$ = new std::vector<sNode*>(1, $1); }
+	| source_code include										{ $$ = $1; $$->push_back($2); }
+	| source_code using_animtree								{ $$ = $1; $$->push_back($2); }
+	| source_code func_definition								{ $$ = $1; $$->push_back($2); }
 	;
 
 include
-	: INCLUDE PATH ';'											{ AddInclude($2); }
-	| INCLUDE IDENTIFIER ';'									{ AddInclude($2); }
+	: INCLUDE PATH ';'											{ $$ = AllocInclude($2); }
+	| INCLUDE IDENTIFIER ';'									{ $$ = AllocInclude($2); }
 	;
 
 using_animtree
-	: USING_ANIMTREE '(' STRING_LITERAL ')' ';'					{ AddUsingAnimTree($3); }
+	: USING_ANIMTREE '(' STRING_LITERAL ')' ';'					{ $$ = AllocUsingAnimTree($3); }
 	;
 
 func_definition
-	: IDENTIFIER '(' parameter_list_opt ')' compound_statement	{ /* AddFuncDefinition($1, $3, $5); */ }
+	: IDENTIFIER '(' parameter_list_opt ')' compound_statement	{ $$ = AllocFuncDefinition($1, $3/*, $5*/); }
 	;
 
 parameter_list_opt
@@ -95,131 +97,131 @@ parameter_list_opt
 	| parameter_list_opt ',' IDENTIFIER							{ $$ = $1; $$->push_back($3); }
 	;
 
-/* add func_call_expression inc_or_dec ? */
-inc_or_dec_expression
-	: IDENTIFIER inc_or_dec										{ /* $$ = CreateIncOrDecExpression(); */ }
-	| array_subscripting_expression inc_or_dec					{ /* $$ = CreateIncOrDecExpression(); */ }
-	| element_selection_expression inc_or_dec					{ /* $$ = CreateIncOrDecExpression(); */ }
+/* add func_call_expression inc_dec ? */
+inc_dec_expression
+	: IDENTIFIER inc_dec										{ $$ = AllocIncDecExpression(IdentifierToNode($1), $2); }
+	| array_subscripting_expression inc_dec						{ $$ = AllocIncDecExpression($1, $2); }
+	| element_selection_expression inc_dec						{ $$ = AllocIncDecExpression($1, $2); }
 	;
 
-inc_or_dec
+inc_dec
 	: INC_OP													{ $$ = 0; }
 	| DEC_OP													{ $$ = 1; }
 	;
 
 /* non-pointer function call */
 func_call_noptr
-	: IDENTIFIER '(' argument_list_opt ')'
-	| PATH REFERENCE_FUNC IDENTIFIER '(' argument_list_opt ')'
-	| IDENTIFIER REFERENCE_FUNC IDENTIFIER '(' argument_list_opt ')'
+	: IDENTIFIER '(' argument_list_opt ')'									{ $$ = AllocFuncCall($1, 0, $3, 0, 0, 0, 0, 0); }
+	| PATH REFERENCE_FUNC IDENTIFIER '(' argument_list_opt ')'				{ $$ = AllocFuncCall($3, $1, $5, 0, 0, 0, 0, 0); }
+	| IDENTIFIER REFERENCE_FUNC IDENTIFIER '(' argument_list_opt ')'		{ $$ = AllocFuncCall($3, $1, $5, 0, 0, 0, 0, 0); }
 	;
 
 /* pointer function call */
 func_call_ptr
-	: DEREFERENCE_FUNC_START expression ']' ']' '(' argument_list_opt ')'
+	: DEREFERENCE_FUNC_START expression ']' ']' '(' argument_list_opt ')'	{ $$ = AllocFuncCall(0, 0, $6, 1, $2, 0, 0, 0); }
 	;
 
 argument_list_opt
 	: /* empty */												{ $$ = 0; }
-	| expression												{ $$ = new std::vector<sExpression*>(1, $1); }
+	| expression												{ $$ = new std::vector<sNode*>(1, $1); }
 	| argument_list_opt ',' expression							{ $$ = $1; $$->push_back($3); }
 	;
 
 /* non-thread function call */
 func_call_nothrd_expression
-	: func_call_noptr
-	| func_call_ptr
-	| func_valid_object func_call_noptr
-	| func_valid_object func_call_ptr
+	: func_call_noptr											{ $$ = $1; $$->funcCall->isThread = 0; }
+	| func_call_ptr												{ $$ = $1; $$->funcCall->isThread = 0; }
+	| func_valid_object func_call_noptr							{ $$ = $2; $$->funcCall->isThread = 0; $$->funcCall->isMethod = 1; $$->funcCall->methodObject = $1; }
+	| func_valid_object func_call_ptr							{ $$ = $2; $$->funcCall->isThread = 0; $$->funcCall->isMethod = 1; $$->funcCall->methodObject = $1; }
 	;
 
 /* thread function call */
 func_call_thrd_expression
-	: THREAD func_call_noptr
-	| THREAD func_call_ptr
-	| func_valid_object THREAD func_call_noptr
-	| func_valid_object THREAD func_call_ptr
+	: THREAD func_call_noptr									{ $$ = $2; $$->funcCall->isThread = 1; }
+	| THREAD func_call_ptr										{ $$ = $2; $$->funcCall->isThread = 1; }
+	| func_valid_object THREAD func_call_noptr					{ $$ = $3; $$->funcCall->isThread = 1; $$->funcCall->isMethod = 1; $$->funcCall->methodObject = $1; }
+	| func_valid_object THREAD func_call_ptr					{ $$ = $3; $$->funcCall->isThread = 1; $$->funcCall->isMethod = 1; $$->funcCall->methodObject = $1; }
 	;
 
 /* things that are syntactically valid to be a function's method object */
 func_valid_object
-	: IDENTIFIER
-	| func_call_nothrd_expression
-	| array_subscripting_expression
-	| element_selection_expression
+	: IDENTIFIER												{ $$ = IdentifierToNode($1); }
+	| func_call_nothrd_expression								{ $$ = $1; }
+	| array_subscripting_expression								{ $$ = $1; }
+	| element_selection_expression								{ $$ = $1; }
 	;
 
 /* Need to add support for more array subscripting expressions */
 array_subscripting_expression
-	: array_valid_name '[' expression ']'
+	: array_valid_name '[' expression ']'						{ $$ = AllocArraySubscriptingExpression($1, $3); }
 	;
 
 /* expressions that are syntactically valid to be a name of an array */
 array_valid_name
-	: IDENTIFIER
-	| func_call_nothrd_expression
-	| array_subscripting_expression
-	| element_selection_expression
-	| parenthesized_expression
+	: IDENTIFIER												{ $$ = IdentifierToNode($1); }
+	| func_call_nothrd_expression								{ $$ = $1; }
+	| array_subscripting_expression								{ $$ = $1; }
+	| element_selection_expression								{ $$ = $1; }
+	| parenthesized_expression									{ $$ = $1; }
 	;
 
-/* Need to add support for more element selection expressions */
+/* identifier might be a keyword, size */
 element_selection_expression
-	: element_valid_selection '.' IDENTIFIER /* identifier might be a keyword, size */
+	: element_valid_selection '.' IDENTIFIER					{ $$ = AllocElementSelectionExpression($1, $3); }
 	;
 
 /* things that are syntactically valid to be selected through "." */
 element_valid_selection
-	: IDENTIFIER
-	| func_call_nothrd_expression
-	| array_subscripting_expression
-	| element_selection_expression
-	| parenthesized_expression
+	: IDENTIFIER												{ $$ = IdentifierToNode($1); }
+	| func_call_nothrd_expression								{ $$ = $1; }
+	| array_subscripting_expression								{ $$ = $1; }
+	| element_selection_expression								{ $$ = $1; }
+	| parenthesized_expression									{ $$ = $1; }
 	;
 
 func_ref_expression
-	: REFERENCE_FUNC IDENTIFIER
-	| IDENTIFIER REFERENCE_FUNC IDENTIFIER
-	| PATH REFERENCE_FUNC IDENTIFIER
+	: REFERENCE_FUNC IDENTIFIER									{ $$ = AllocFuncRefExpression(0, $2); }
+	| IDENTIFIER REFERENCE_FUNC IDENTIFIER						{ $$ = AllocFuncRefExpression($1, $3); }
+	| PATH REFERENCE_FUNC IDENTIFIER							{ $$ = AllocFuncRefExpression($1, $3); }
 	;
 
 expression
-	: IDENTIFIER												{ $$ = CreateExpression(TYPE_EXPR_IDENTIFIER, $1); }
-	| INT_LITERAL												{ $$ = CreateExpression(TYPE_EXPR_INT, $1); }
-	| FLOAT_LITERAL												{ $$ = CreateExpression(TYPE_EXPR_FLOAT, $1); }
-	| STRING_LITERAL											{ $$ = CreateExpression(TYPE_EXPR_STRING, $1); }
-	| LOC_STRING_LITERAL										{ $$ = CreateExpression(TYPE_EXPR_LOC_STRING, $1); }
-	| HASH_STRING_LITERAL										{ $$ = CreateExpression(TYPE_EXPR_HASH_STRING, $1); }
-	| '(' expression ',' expression ',' expression ')'			{ $$ = CreateExpression(TYPE_EXPR_VECTOR, $2, $4, $6); }
-	| EMPTY_ARRAY												{ $$ = CreateExpression(TYPE_EXPR_EMPTY_ARRAY); }
-	| UNDEFINED													{ $$ = CreateExpression(TYPE_EXPR_UNDEFINED); }
-	| func_call_nothrd_expression								{ $$ = CreateExpression(TYPE_EXPR_FUNC_CALL_NOTHRD); }
-	| array_subscripting_expression								{ $$ = CreateExpression(TYPE_EXPR_ARRAY_SUBSCRIPTING); }
-	| element_selection_expression								{ $$ = CreateExpression(TYPE_EXPR_ELEMENT_SELECTION); }
-	| func_ref_expression										{ $$ = CreateExpression(TYPE_EXPR_FUNC_REF); }
-	| expression LOGICAL_OR_OP expression						{ $$ = CreateExpression(TYPE_EXPR_LOGICAL_OR_OP, $1, $3); }
-	| expression LOGICAL_AND_OP expression						{ $$ = CreateExpression(TYPE_EXPR_LOGICAL_AND_OP, $1, $3); }
-	| expression '|' expression									{ $$ = CreateExpression(TYPE_EXPR_BIT_OR_OP, $1, $3); }
-	| expression '^' expression									{ $$ = CreateExpression(TYPE_EXPR_BIT_EX_OR_OP, $1, $3); }
-	| expression '&' expression									{ $$ = CreateExpression(TYPE_EXPR_BIT_AND_OP, $1, $3); }
-	| expression EQUALITY_OP expression							{ $$ = CreateExpression(TYPE_EXPR_EQUALITY_OP, $1, $3); }
-	| expression INEQUALITY_OP expression						{ $$ = CreateExpression(TYPE_EXPR_INEQUALITY_OP, $1, $3); }
-	| expression '<' expression									{ $$ = CreateExpression(TYPE_EXPR_LESS_OP, $1, $3); }
-	| expression '>' expression									{ $$ = CreateExpression(TYPE_EXPR_GREATER_OP, $1, $3); }
-	| expression LESS_EQUAL_OP expression						{ $$ = CreateExpression(TYPE_EXPR_LESS_EQUAL_OP, $1, $3); }
-	| expression GREATER_EQUAL_OP expression					{ $$ = CreateExpression(TYPE_EXPR_GREATER_EQUAL_OP, $1, $3); }
-	| expression SHIFT_LEFT_OP expression						{ $$ = CreateExpression(TYPE_EXPR_SHIFT_LEFT_OP, $1, $3); }
-	| expression SHIFT_RIGHT_OP expression						{ $$ = CreateExpression(TYPE_EXPR_SHIFT_RIGHT_OP, $1, $3); }
-	| expression '+' expression									{ $$ = CreateExpression(TYPE_EXPR_PLUS_OP, $1, $3); }
-	| expression '-' expression									{ $$ = CreateExpression(TYPE_EXPR_MINUS_OP, $1, $3); }
-	| expression '*' expression									{ $$ = CreateExpression(TYPE_EXPR_MULTIPLY_OP, $1, $3); }
-	| expression '/' expression									{ $$ = CreateExpression(TYPE_EXPR_DIVIDE_OP, $1, $3); }
-	| expression '%' expression									{ $$ = CreateExpression(TYPE_EXPR_MOD_OP, $1, $3); }
-	| '!' expression											{ $$ = CreateExpression(TYPE_EXPR_BOOL_NOT_OP, $2); }
-	| '~' expression											{ $$ = CreateExpression(TYPE_EXPR_BOOL_COMPLEMENT_OP, $2); }
-	| '-' INT_LITERAL %prec UNARY_MINUS							{ $$ = CreateExpression(TYPE_EXPR_UMINUS_INT_OP, $2); }
-	| '-' FLOAT_LITERAL %prec UNARY_MINUS						{ $$ = CreateExpression(TYPE_EXPR_UMINUS_FLOAT_OP, $2); }
-	| '%' IDENTIFIER %prec UNARY_ANIMREF						{ $$ = CreateExpression(TYPE_EXPR_UANIMREF_OP, $2); }
+	: IDENTIFIER												{ $$ = AllocExpression(TYPE_EXPR_IDENTIFIER, $1); }
+	| INT_LITERAL												{ $$ = AllocExpression(TYPE_EXPR_INT, $1); }
+	| FLOAT_LITERAL												{ $$ = AllocExpression(TYPE_EXPR_FLOAT, $1); }
+	| STRING_LITERAL											{ $$ = AllocExpression(TYPE_EXPR_STRING, $1); }
+	| LOC_STRING_LITERAL										{ $$ = AllocExpression(TYPE_EXPR_LOC_STRING, $1); }
+	| HASH_STRING_LITERAL										{ $$ = AllocExpression(TYPE_EXPR_HASH_STRING, $1); }
+	| '(' expression ',' expression ',' expression ')'			{ $$ = AllocExpression(TYPE_EXPR_VECTOR, $2, $4, $6); }
+	| EMPTY_ARRAY												{ $$ = AllocExpression(TYPE_EXPR_EMPTY_ARRAY); }
+	| UNDEFINED													{ $$ = AllocExpression(TYPE_EXPR_UNDEFINED); }
+	| func_call_nothrd_expression								{ $$ = AllocExpression(TYPE_EXPR_FUNC_CALL_NOTHRD, $1); }
+	| array_subscripting_expression								{ $$ = AllocExpression(TYPE_EXPR_ARRAY_SUBSCRIPTING, $1); }
+	| element_selection_expression								{ $$ = AllocExpression(TYPE_EXPR_ELEMENT_SELECTION, $1); }
+	| func_ref_expression										{ $$ = AllocExpression(TYPE_EXPR_FUNC_REF, $1); }
+	| expression LOGICAL_OR_OP expression						{ $$ = AllocExpression(TYPE_EXPR_LOGICAL_OR_OP, $1, $3); }
+	| expression LOGICAL_AND_OP expression						{ $$ = AllocExpression(TYPE_EXPR_LOGICAL_AND_OP, $1, $3); }
+	| expression '|' expression									{ $$ = AllocExpression(TYPE_EXPR_BIT_OR_OP, $1, $3); }
+	| expression '^' expression									{ $$ = AllocExpression(TYPE_EXPR_BIT_EX_OR_OP, $1, $3); }
+	| expression '&' expression									{ $$ = AllocExpression(TYPE_EXPR_BIT_AND_OP, $1, $3); }
+	| expression EQUALITY_OP expression							{ $$ = AllocExpression(TYPE_EXPR_EQUALITY_OP, $1, $3); }
+	| expression INEQUALITY_OP expression						{ $$ = AllocExpression(TYPE_EXPR_INEQUALITY_OP, $1, $3); }
+	| expression '<' expression									{ $$ = AllocExpression(TYPE_EXPR_LESS_OP, $1, $3); }
+	| expression '>' expression									{ $$ = AllocExpression(TYPE_EXPR_GREATER_OP, $1, $3); }
+	| expression LESS_EQUAL_OP expression						{ $$ = AllocExpression(TYPE_EXPR_LESS_EQUAL_OP, $1, $3); }
+	| expression GREATER_EQUAL_OP expression					{ $$ = AllocExpression(TYPE_EXPR_GREATER_EQUAL_OP, $1, $3); }
+	| expression SHIFT_LEFT_OP expression						{ $$ = AllocExpression(TYPE_EXPR_SHIFT_LEFT_OP, $1, $3); }
+	| expression SHIFT_RIGHT_OP expression						{ $$ = AllocExpression(TYPE_EXPR_SHIFT_RIGHT_OP, $1, $3); }
+	| expression '+' expression									{ $$ = AllocExpression(TYPE_EXPR_PLUS_OP, $1, $3); }
+	| expression '-' expression									{ $$ = AllocExpression(TYPE_EXPR_MINUS_OP, $1, $3); }
+	| expression '*' expression									{ $$ = AllocExpression(TYPE_EXPR_MULTIPLY_OP, $1, $3); }
+	| expression '/' expression									{ $$ = AllocExpression(TYPE_EXPR_DIVIDE_OP, $1, $3); }
+	| expression '%' expression									{ $$ = AllocExpression(TYPE_EXPR_MOD_OP, $1, $3); }
+	| '!' expression											{ $$ = AllocExpression(TYPE_EXPR_BOOL_NOT_OP, $2); }
+	| '~' expression											{ $$ = AllocExpression(TYPE_EXPR_BOOL_COMPLEMENT_OP, $2); }
+	| '-' INT_LITERAL %prec UNARY_MINUS							{ $$ = AllocExpression(TYPE_EXPR_UMINUS_INT_OP, $2); }
+	| '-' FLOAT_LITERAL %prec UNARY_MINUS						{ $$ = AllocExpression(TYPE_EXPR_UMINUS_FLOAT_OP, $2); }
+	| '%' IDENTIFIER %prec UNARY_ANIMREF						{ $$ = AllocExpression(TYPE_EXPR_UANIMREF_OP, $2); }
 	| parenthesized_expression									{ $$ = $1; }
 	;
 
@@ -242,9 +244,9 @@ assignment_expression
 	;
 
 operation_valid_lvalue
-	: IDENTIFIER
-	| array_subscripting_expression
-	| element_selection_expression
+	: IDENTIFIER												{ $$ = IdentifierToNode($1); }
+	| array_subscripting_expression								{ $$ = $1; }
+	| element_selection_expression								{ $$ = $1; }
 	;
 
 statement
@@ -288,14 +290,14 @@ for_condition_opt
 
 for_modify_value_opt
 	: /* empty */
-	| inc_or_dec_expression
+	| inc_dec_expression
 	| assignment_expression
 	;
 
 /* not putting expression here because it doesn't do anything */
 expression_statement
 	: ';'
-	| inc_or_dec_expression ';'
+	| inc_dec_expression ';'
 	| func_call_nothrd_expression ';'
 	| func_call_thrd_expression ';'
 	| assignment_expression ';'

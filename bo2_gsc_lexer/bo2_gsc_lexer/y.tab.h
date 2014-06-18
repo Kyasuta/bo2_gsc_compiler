@@ -74,8 +74,10 @@ int yylex(void);
 
 void yyerror(char const *s);
 
+void OnParsingComplete(std::vector<sNode*>* sourceCode);
+
 /* Line 371 of yacc.c  */
-#line 79 "y.tab.h"
+#line 81 "y.tab.h"
 
 # ifndef YY_NULL
 #  if defined __cplusplus && 201103L <= __cplusplus
@@ -169,19 +171,18 @@ extern int yydebug;
 typedef union YYSTYPE
 {
 /* Line 387 of yacc.c  */
-#line 12 "..\\..\\gsc_cod9.y"
+#line 14 "..\\..\\gsc_cod9.y"
 
 	int intValue;
 	float floatValue;
 	char* stringValue;
+	sNode* nodeValue;
 	std::vector<char*>* stringArrayValue;
-	std::vector<sExpression*>* expressionArrayValue;
-	sExpression* sExpressionValue;
-	sArgumentList* sArgumentListValue;
+	std::vector<sNode*>* nodeArrayValue;
 
 
 /* Line 387 of yacc.c  */
-#line 185 "y.tab.h"
+#line 186 "y.tab.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
@@ -209,7 +210,7 @@ int yyparse ();
 /* Copy the second part of user declarations.  */
 
 /* Line 390 of yacc.c  */
-#line 213 "y.tab.h"
+#line 214 "y.tab.h"
 
 #ifdef short
 # undef short
@@ -570,21 +571,21 @@ static const yytype_int8 yyrhs[] =
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,    65,    65,    67,    71,    72,    73,    74,    75,    76,
-      80,    81,    85,    89,    93,    94,    95,   100,   101,   102,
-     106,   107,   112,   113,   114,   119,   123,   124,   125,   130,
-     131,   132,   133,   138,   139,   140,   141,   146,   147,   148,
-     149,   154,   159,   160,   161,   162,   163,   168,   173,   174,
-     175,   176,   177,   181,   182,   183,   187,   188,   189,   190,
-     191,   192,   193,   194,   195,   196,   197,   198,   199,   200,
-     201,   202,   203,   204,   205,   206,   207,   208,   209,   210,
-     211,   212,   213,   214,   215,   216,   217,   218,   219,   220,
-     221,   222,   223,   227,   231,   232,   233,   234,   235,   236,
-     237,   238,   239,   240,   241,   245,   246,   247,   251,   252,
-     253,   254,   255,   256,   257,   262,   263,   264,   268,   269,
-     270,   271,   275,   276,   279,   281,   284,   286,   289,   291,
-     292,   297,   298,   299,   300,   301,   305,   306,   310,   311,
-     315,   316,   317,   321,   322,   323
+       0,    67,    67,    69,    73,    74,    75,    76,    77,    78,
+      82,    83,    87,    91,    95,    96,    97,   102,   103,   104,
+     108,   109,   114,   115,   116,   121,   125,   126,   127,   132,
+     133,   134,   135,   140,   141,   142,   143,   148,   149,   150,
+     151,   156,   161,   162,   163,   164,   165,   170,   175,   176,
+     177,   178,   179,   183,   184,   185,   189,   190,   191,   192,
+     193,   194,   195,   196,   197,   198,   199,   200,   201,   202,
+     203,   204,   205,   206,   207,   208,   209,   210,   211,   212,
+     213,   214,   215,   216,   217,   218,   219,   220,   221,   222,
+     223,   224,   225,   229,   233,   234,   235,   236,   237,   238,
+     239,   240,   241,   242,   243,   247,   248,   249,   253,   254,
+     255,   256,   257,   258,   259,   264,   265,   266,   270,   271,
+     272,   273,   277,   278,   281,   283,   286,   288,   291,   293,
+     294,   299,   300,   301,   302,   303,   307,   308,   312,   313,
+     317,   318,   319,   323,   324,   325
 };
 #endif
 
@@ -609,8 +610,8 @@ static const char *const yytname[] =
   "';'", "'('", "')'", "','", "']'", "'['", "'.'", "'='", "':'", "'{'",
   "'}'", "$accept", "translation_unit", "source_code", "include",
   "using_animtree", "func_definition", "parameter_list_opt",
-  "inc_or_dec_expression", "inc_or_dec", "func_call_noptr",
-  "func_call_ptr", "argument_list_opt", "func_call_nothrd_expression",
+  "inc_dec_expression", "inc_dec", "func_call_noptr", "func_call_ptr",
+  "argument_list_opt", "func_call_nothrd_expression",
   "func_call_thrd_expression", "func_valid_object",
   "array_subscripting_expression", "array_valid_name",
   "element_selection_expression", "element_valid_selection",
@@ -1810,327 +1811,573 @@ yyreduce:
   YY_REDUCE_PRINT (yyn);
   switch (yyn)
     {
-        case 10:
+        case 3:
 /* Line 1787 of yacc.c  */
-#line 80 "..\\..\\gsc_cod9.y"
-    { AddInclude((yyvsp[(2) - (3)].stringValue)); }
+#line 69 "..\\..\\gsc_cod9.y"
+    { OnParsingComplete((yyvsp[(1) - (1)].nodeArrayValue)); }
+    break;
+
+  case 4:
+/* Line 1787 of yacc.c  */
+#line 73 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeArrayValue) = new std::vector<sNode*>(1, (yyvsp[(1) - (1)].nodeValue)); }
+    break;
+
+  case 5:
+/* Line 1787 of yacc.c  */
+#line 74 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeArrayValue) = new std::vector<sNode*>(1, (yyvsp[(1) - (1)].nodeValue)); }
+    break;
+
+  case 6:
+/* Line 1787 of yacc.c  */
+#line 75 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeArrayValue) = new std::vector<sNode*>(1, (yyvsp[(1) - (1)].nodeValue)); }
+    break;
+
+  case 7:
+/* Line 1787 of yacc.c  */
+#line 76 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeArrayValue) = (yyvsp[(1) - (2)].nodeArrayValue); (yyval.nodeArrayValue)->push_back((yyvsp[(2) - (2)].nodeValue)); }
+    break;
+
+  case 8:
+/* Line 1787 of yacc.c  */
+#line 77 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeArrayValue) = (yyvsp[(1) - (2)].nodeArrayValue); (yyval.nodeArrayValue)->push_back((yyvsp[(2) - (2)].nodeValue)); }
+    break;
+
+  case 9:
+/* Line 1787 of yacc.c  */
+#line 78 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeArrayValue) = (yyvsp[(1) - (2)].nodeArrayValue); (yyval.nodeArrayValue)->push_back((yyvsp[(2) - (2)].nodeValue)); }
+    break;
+
+  case 10:
+/* Line 1787 of yacc.c  */
+#line 82 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocInclude((yyvsp[(2) - (3)].stringValue)); }
     break;
 
   case 11:
 /* Line 1787 of yacc.c  */
-#line 81 "..\\..\\gsc_cod9.y"
-    { AddInclude((yyvsp[(2) - (3)].stringValue)); }
+#line 83 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocInclude((yyvsp[(2) - (3)].stringValue)); }
     break;
 
   case 12:
 /* Line 1787 of yacc.c  */
-#line 85 "..\\..\\gsc_cod9.y"
-    { AddUsingAnimTree((yyvsp[(3) - (5)].stringValue)); }
+#line 87 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocUsingAnimTree((yyvsp[(3) - (5)].stringValue)); }
     break;
 
   case 13:
 /* Line 1787 of yacc.c  */
-#line 89 "..\\..\\gsc_cod9.y"
-    { /* AddFuncDefinition($1, $3, $5); */ }
+#line 91 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocFuncDefinition((yyvsp[(1) - (5)].stringValue), (yyvsp[(3) - (5)].stringArrayValue)/*, $5*/); }
     break;
 
   case 14:
 /* Line 1787 of yacc.c  */
-#line 93 "..\\..\\gsc_cod9.y"
+#line 95 "..\\..\\gsc_cod9.y"
     { (yyval.stringArrayValue) = 0; }
     break;
 
   case 15:
 /* Line 1787 of yacc.c  */
-#line 94 "..\\..\\gsc_cod9.y"
+#line 96 "..\\..\\gsc_cod9.y"
     { (yyval.stringArrayValue) = new std::vector<char*>(1, (yyvsp[(1) - (1)].stringValue)); }
     break;
 
   case 16:
 /* Line 1787 of yacc.c  */
-#line 95 "..\\..\\gsc_cod9.y"
+#line 97 "..\\..\\gsc_cod9.y"
     { (yyval.stringArrayValue) = (yyvsp[(1) - (3)].stringArrayValue); (yyval.stringArrayValue)->push_back((yyvsp[(3) - (3)].stringValue)); }
     break;
 
   case 17:
 /* Line 1787 of yacc.c  */
-#line 100 "..\\..\\gsc_cod9.y"
-    { /* $$ = CreateIncOrDecExpression(); */ }
+#line 102 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocIncDecExpression(IdentifierToNode((yyvsp[(1) - (2)].stringValue)), (yyvsp[(2) - (2)].intValue)); }
     break;
 
   case 18:
 /* Line 1787 of yacc.c  */
-#line 101 "..\\..\\gsc_cod9.y"
-    { /* $$ = CreateIncOrDecExpression(); */ }
+#line 103 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocIncDecExpression((yyvsp[(1) - (2)].nodeValue), (yyvsp[(2) - (2)].intValue)); }
     break;
 
   case 19:
 /* Line 1787 of yacc.c  */
-#line 102 "..\\..\\gsc_cod9.y"
-    { /* $$ = CreateIncOrDecExpression(); */ }
+#line 104 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocIncDecExpression((yyvsp[(1) - (2)].nodeValue), (yyvsp[(2) - (2)].intValue)); }
     break;
 
   case 20:
 /* Line 1787 of yacc.c  */
-#line 106 "..\\..\\gsc_cod9.y"
+#line 108 "..\\..\\gsc_cod9.y"
     { (yyval.intValue) = 0; }
     break;
 
   case 21:
 /* Line 1787 of yacc.c  */
-#line 107 "..\\..\\gsc_cod9.y"
+#line 109 "..\\..\\gsc_cod9.y"
     { (yyval.intValue) = 1; }
+    break;
+
+  case 22:
+/* Line 1787 of yacc.c  */
+#line 114 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocFuncCall((yyvsp[(1) - (4)].stringValue), 0, (yyvsp[(3) - (4)].nodeArrayValue), 0, 0, 0, 0, 0); }
+    break;
+
+  case 23:
+/* Line 1787 of yacc.c  */
+#line 115 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocFuncCall((yyvsp[(3) - (6)].stringValue), (yyvsp[(1) - (6)].stringValue), (yyvsp[(5) - (6)].nodeArrayValue), 0, 0, 0, 0, 0); }
+    break;
+
+  case 24:
+/* Line 1787 of yacc.c  */
+#line 116 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocFuncCall((yyvsp[(3) - (6)].stringValue), (yyvsp[(1) - (6)].stringValue), (yyvsp[(5) - (6)].nodeArrayValue), 0, 0, 0, 0, 0); }
+    break;
+
+  case 25:
+/* Line 1787 of yacc.c  */
+#line 121 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocFuncCall(0, 0, (yyvsp[(6) - (7)].nodeArrayValue), 1, (yyvsp[(2) - (7)].nodeValue), 0, 0, 0); }
     break;
 
   case 26:
 /* Line 1787 of yacc.c  */
-#line 123 "..\\..\\gsc_cod9.y"
-    { (yyval.expressionArrayValue) = 0; }
+#line 125 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeArrayValue) = 0; }
     break;
 
   case 27:
 /* Line 1787 of yacc.c  */
-#line 124 "..\\..\\gsc_cod9.y"
-    { (yyval.expressionArrayValue) = new std::vector<sExpression*>(1, (yyvsp[(1) - (1)].sExpressionValue)); }
+#line 126 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeArrayValue) = new std::vector<sNode*>(1, (yyvsp[(1) - (1)].nodeValue)); }
     break;
 
   case 28:
 /* Line 1787 of yacc.c  */
-#line 125 "..\\..\\gsc_cod9.y"
-    { (yyval.expressionArrayValue) = (yyvsp[(1) - (3)].expressionArrayValue); (yyval.expressionArrayValue)->push_back((yyvsp[(3) - (3)].sExpressionValue)); }
+#line 127 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeArrayValue) = (yyvsp[(1) - (3)].nodeArrayValue); (yyval.nodeArrayValue)->push_back((yyvsp[(3) - (3)].nodeValue)); }
+    break;
+
+  case 29:
+/* Line 1787 of yacc.c  */
+#line 132 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = (yyvsp[(1) - (1)].nodeValue); (yyval.nodeValue)->funcCall->isThread = 0; }
+    break;
+
+  case 30:
+/* Line 1787 of yacc.c  */
+#line 133 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = (yyvsp[(1) - (1)].nodeValue); (yyval.nodeValue)->funcCall->isThread = 0; }
+    break;
+
+  case 31:
+/* Line 1787 of yacc.c  */
+#line 134 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = (yyvsp[(2) - (2)].nodeValue); (yyval.nodeValue)->funcCall->isThread = 0; (yyval.nodeValue)->funcCall->isMethod = 1; (yyval.nodeValue)->funcCall->methodObject = (yyvsp[(1) - (2)].nodeValue); }
+    break;
+
+  case 32:
+/* Line 1787 of yacc.c  */
+#line 135 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = (yyvsp[(2) - (2)].nodeValue); (yyval.nodeValue)->funcCall->isThread = 0; (yyval.nodeValue)->funcCall->isMethod = 1; (yyval.nodeValue)->funcCall->methodObject = (yyvsp[(1) - (2)].nodeValue); }
+    break;
+
+  case 33:
+/* Line 1787 of yacc.c  */
+#line 140 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = (yyvsp[(2) - (2)].nodeValue); (yyval.nodeValue)->funcCall->isThread = 1; }
+    break;
+
+  case 34:
+/* Line 1787 of yacc.c  */
+#line 141 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = (yyvsp[(2) - (2)].nodeValue); (yyval.nodeValue)->funcCall->isThread = 1; }
+    break;
+
+  case 35:
+/* Line 1787 of yacc.c  */
+#line 142 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = (yyvsp[(3) - (3)].nodeValue); (yyval.nodeValue)->funcCall->isThread = 1; (yyval.nodeValue)->funcCall->isMethod = 1; (yyval.nodeValue)->funcCall->methodObject = (yyvsp[(1) - (3)].nodeValue); }
+    break;
+
+  case 36:
+/* Line 1787 of yacc.c  */
+#line 143 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = (yyvsp[(3) - (3)].nodeValue); (yyval.nodeValue)->funcCall->isThread = 1; (yyval.nodeValue)->funcCall->isMethod = 1; (yyval.nodeValue)->funcCall->methodObject = (yyvsp[(1) - (3)].nodeValue); }
+    break;
+
+  case 37:
+/* Line 1787 of yacc.c  */
+#line 148 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = IdentifierToNode((yyvsp[(1) - (1)].stringValue)); }
+    break;
+
+  case 38:
+/* Line 1787 of yacc.c  */
+#line 149 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = (yyvsp[(1) - (1)].nodeValue); }
+    break;
+
+  case 39:
+/* Line 1787 of yacc.c  */
+#line 150 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = (yyvsp[(1) - (1)].nodeValue); }
+    break;
+
+  case 40:
+/* Line 1787 of yacc.c  */
+#line 151 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = (yyvsp[(1) - (1)].nodeValue); }
+    break;
+
+  case 41:
+/* Line 1787 of yacc.c  */
+#line 156 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocArraySubscriptingExpression((yyvsp[(1) - (4)].nodeValue), (yyvsp[(3) - (4)].nodeValue)); }
+    break;
+
+  case 42:
+/* Line 1787 of yacc.c  */
+#line 161 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = IdentifierToNode((yyvsp[(1) - (1)].stringValue)); }
+    break;
+
+  case 43:
+/* Line 1787 of yacc.c  */
+#line 162 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = (yyvsp[(1) - (1)].nodeValue); }
+    break;
+
+  case 44:
+/* Line 1787 of yacc.c  */
+#line 163 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = (yyvsp[(1) - (1)].nodeValue); }
+    break;
+
+  case 45:
+/* Line 1787 of yacc.c  */
+#line 164 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = (yyvsp[(1) - (1)].nodeValue); }
+    break;
+
+  case 46:
+/* Line 1787 of yacc.c  */
+#line 165 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = (yyvsp[(1) - (1)].nodeValue); }
+    break;
+
+  case 47:
+/* Line 1787 of yacc.c  */
+#line 170 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocElementSelectionExpression((yyvsp[(1) - (3)].nodeValue), (yyvsp[(3) - (3)].stringValue)); }
+    break;
+
+  case 48:
+/* Line 1787 of yacc.c  */
+#line 175 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = IdentifierToNode((yyvsp[(1) - (1)].stringValue)); }
+    break;
+
+  case 49:
+/* Line 1787 of yacc.c  */
+#line 176 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = (yyvsp[(1) - (1)].nodeValue); }
+    break;
+
+  case 50:
+/* Line 1787 of yacc.c  */
+#line 177 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = (yyvsp[(1) - (1)].nodeValue); }
+    break;
+
+  case 51:
+/* Line 1787 of yacc.c  */
+#line 178 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = (yyvsp[(1) - (1)].nodeValue); }
+    break;
+
+  case 52:
+/* Line 1787 of yacc.c  */
+#line 179 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = (yyvsp[(1) - (1)].nodeValue); }
+    break;
+
+  case 53:
+/* Line 1787 of yacc.c  */
+#line 183 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocFuncRefExpression(0, (yyvsp[(2) - (2)].stringValue)); }
+    break;
+
+  case 54:
+/* Line 1787 of yacc.c  */
+#line 184 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocFuncRefExpression((yyvsp[(1) - (3)].stringValue), (yyvsp[(3) - (3)].stringValue)); }
+    break;
+
+  case 55:
+/* Line 1787 of yacc.c  */
+#line 185 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocFuncRefExpression((yyvsp[(1) - (3)].stringValue), (yyvsp[(3) - (3)].stringValue)); }
     break;
 
   case 56:
 /* Line 1787 of yacc.c  */
-#line 187 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = CreateExpression(TYPE_EXPR_IDENTIFIER, (yyvsp[(1) - (1)].stringValue)); }
+#line 189 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocExpression(TYPE_EXPR_IDENTIFIER, (yyvsp[(1) - (1)].stringValue)); }
     break;
 
   case 57:
 /* Line 1787 of yacc.c  */
-#line 188 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = CreateExpression(TYPE_EXPR_INT, (yyvsp[(1) - (1)].intValue)); }
+#line 190 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocExpression(TYPE_EXPR_INT, (yyvsp[(1) - (1)].intValue)); }
     break;
 
   case 58:
 /* Line 1787 of yacc.c  */
-#line 189 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = CreateExpression(TYPE_EXPR_FLOAT, (yyvsp[(1) - (1)].floatValue)); }
+#line 191 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocExpression(TYPE_EXPR_FLOAT, (yyvsp[(1) - (1)].floatValue)); }
     break;
 
   case 59:
 /* Line 1787 of yacc.c  */
-#line 190 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = CreateExpression(TYPE_EXPR_STRING, (yyvsp[(1) - (1)].stringValue)); }
+#line 192 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocExpression(TYPE_EXPR_STRING, (yyvsp[(1) - (1)].stringValue)); }
     break;
 
   case 60:
 /* Line 1787 of yacc.c  */
-#line 191 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = CreateExpression(TYPE_EXPR_LOC_STRING, (yyvsp[(1) - (1)].stringValue)); }
+#line 193 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocExpression(TYPE_EXPR_LOC_STRING, (yyvsp[(1) - (1)].stringValue)); }
     break;
 
   case 61:
 /* Line 1787 of yacc.c  */
-#line 192 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = CreateExpression(TYPE_EXPR_HASH_STRING, (yyvsp[(1) - (1)].stringValue)); }
+#line 194 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocExpression(TYPE_EXPR_HASH_STRING, (yyvsp[(1) - (1)].stringValue)); }
     break;
 
   case 62:
 /* Line 1787 of yacc.c  */
-#line 193 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = CreateExpression(TYPE_EXPR_VECTOR, (yyvsp[(2) - (7)].sExpressionValue), (yyvsp[(4) - (7)].sExpressionValue), (yyvsp[(6) - (7)].sExpressionValue)); }
+#line 195 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocExpression(TYPE_EXPR_VECTOR, (yyvsp[(2) - (7)].nodeValue), (yyvsp[(4) - (7)].nodeValue), (yyvsp[(6) - (7)].nodeValue)); }
     break;
 
   case 63:
 /* Line 1787 of yacc.c  */
-#line 194 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = CreateExpression(TYPE_EXPR_EMPTY_ARRAY); }
+#line 196 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocExpression(TYPE_EXPR_EMPTY_ARRAY); }
     break;
 
   case 64:
 /* Line 1787 of yacc.c  */
-#line 195 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = CreateExpression(TYPE_EXPR_UNDEFINED); }
+#line 197 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocExpression(TYPE_EXPR_UNDEFINED); }
     break;
 
   case 65:
 /* Line 1787 of yacc.c  */
-#line 196 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = CreateExpression(TYPE_EXPR_FUNC_CALL_NOTHRD); }
+#line 198 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocExpression(TYPE_EXPR_FUNC_CALL_NOTHRD, (yyvsp[(1) - (1)].nodeValue)); }
     break;
 
   case 66:
 /* Line 1787 of yacc.c  */
-#line 197 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = CreateExpression(TYPE_EXPR_ARRAY_SUBSCRIPTING); }
+#line 199 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocExpression(TYPE_EXPR_ARRAY_SUBSCRIPTING, (yyvsp[(1) - (1)].nodeValue)); }
     break;
 
   case 67:
 /* Line 1787 of yacc.c  */
-#line 198 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = CreateExpression(TYPE_EXPR_ELEMENT_SELECTION); }
+#line 200 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocExpression(TYPE_EXPR_ELEMENT_SELECTION, (yyvsp[(1) - (1)].nodeValue)); }
     break;
 
   case 68:
 /* Line 1787 of yacc.c  */
-#line 199 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = CreateExpression(TYPE_EXPR_FUNC_REF); }
+#line 201 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocExpression(TYPE_EXPR_FUNC_REF, (yyvsp[(1) - (1)].nodeValue)); }
     break;
 
   case 69:
 /* Line 1787 of yacc.c  */
-#line 200 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = CreateExpression(TYPE_EXPR_LOGICAL_OR_OP, (yyvsp[(1) - (3)].sExpressionValue), (yyvsp[(3) - (3)].sExpressionValue)); }
+#line 202 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocExpression(TYPE_EXPR_LOGICAL_OR_OP, (yyvsp[(1) - (3)].nodeValue), (yyvsp[(3) - (3)].nodeValue)); }
     break;
 
   case 70:
 /* Line 1787 of yacc.c  */
-#line 201 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = CreateExpression(TYPE_EXPR_LOGICAL_AND_OP, (yyvsp[(1) - (3)].sExpressionValue), (yyvsp[(3) - (3)].sExpressionValue)); }
+#line 203 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocExpression(TYPE_EXPR_LOGICAL_AND_OP, (yyvsp[(1) - (3)].nodeValue), (yyvsp[(3) - (3)].nodeValue)); }
     break;
 
   case 71:
 /* Line 1787 of yacc.c  */
-#line 202 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = CreateExpression(TYPE_EXPR_BIT_OR_OP, (yyvsp[(1) - (3)].sExpressionValue), (yyvsp[(3) - (3)].sExpressionValue)); }
+#line 204 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocExpression(TYPE_EXPR_BIT_OR_OP, (yyvsp[(1) - (3)].nodeValue), (yyvsp[(3) - (3)].nodeValue)); }
     break;
 
   case 72:
 /* Line 1787 of yacc.c  */
-#line 203 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = CreateExpression(TYPE_EXPR_BIT_EX_OR_OP, (yyvsp[(1) - (3)].sExpressionValue), (yyvsp[(3) - (3)].sExpressionValue)); }
+#line 205 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocExpression(TYPE_EXPR_BIT_EX_OR_OP, (yyvsp[(1) - (3)].nodeValue), (yyvsp[(3) - (3)].nodeValue)); }
     break;
 
   case 73:
 /* Line 1787 of yacc.c  */
-#line 204 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = CreateExpression(TYPE_EXPR_BIT_AND_OP, (yyvsp[(1) - (3)].sExpressionValue), (yyvsp[(3) - (3)].sExpressionValue)); }
+#line 206 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocExpression(TYPE_EXPR_BIT_AND_OP, (yyvsp[(1) - (3)].nodeValue), (yyvsp[(3) - (3)].nodeValue)); }
     break;
 
   case 74:
 /* Line 1787 of yacc.c  */
-#line 205 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = CreateExpression(TYPE_EXPR_EQUALITY_OP, (yyvsp[(1) - (3)].sExpressionValue), (yyvsp[(3) - (3)].sExpressionValue)); }
+#line 207 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocExpression(TYPE_EXPR_EQUALITY_OP, (yyvsp[(1) - (3)].nodeValue), (yyvsp[(3) - (3)].nodeValue)); }
     break;
 
   case 75:
 /* Line 1787 of yacc.c  */
-#line 206 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = CreateExpression(TYPE_EXPR_INEQUALITY_OP, (yyvsp[(1) - (3)].sExpressionValue), (yyvsp[(3) - (3)].sExpressionValue)); }
+#line 208 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocExpression(TYPE_EXPR_INEQUALITY_OP, (yyvsp[(1) - (3)].nodeValue), (yyvsp[(3) - (3)].nodeValue)); }
     break;
 
   case 76:
 /* Line 1787 of yacc.c  */
-#line 207 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = CreateExpression(TYPE_EXPR_LESS_OP, (yyvsp[(1) - (3)].sExpressionValue), (yyvsp[(3) - (3)].sExpressionValue)); }
+#line 209 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocExpression(TYPE_EXPR_LESS_OP, (yyvsp[(1) - (3)].nodeValue), (yyvsp[(3) - (3)].nodeValue)); }
     break;
 
   case 77:
 /* Line 1787 of yacc.c  */
-#line 208 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = CreateExpression(TYPE_EXPR_GREATER_OP, (yyvsp[(1) - (3)].sExpressionValue), (yyvsp[(3) - (3)].sExpressionValue)); }
+#line 210 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocExpression(TYPE_EXPR_GREATER_OP, (yyvsp[(1) - (3)].nodeValue), (yyvsp[(3) - (3)].nodeValue)); }
     break;
 
   case 78:
 /* Line 1787 of yacc.c  */
-#line 209 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = CreateExpression(TYPE_EXPR_LESS_EQUAL_OP, (yyvsp[(1) - (3)].sExpressionValue), (yyvsp[(3) - (3)].sExpressionValue)); }
+#line 211 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocExpression(TYPE_EXPR_LESS_EQUAL_OP, (yyvsp[(1) - (3)].nodeValue), (yyvsp[(3) - (3)].nodeValue)); }
     break;
 
   case 79:
 /* Line 1787 of yacc.c  */
-#line 210 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = CreateExpression(TYPE_EXPR_GREATER_EQUAL_OP, (yyvsp[(1) - (3)].sExpressionValue), (yyvsp[(3) - (3)].sExpressionValue)); }
+#line 212 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocExpression(TYPE_EXPR_GREATER_EQUAL_OP, (yyvsp[(1) - (3)].nodeValue), (yyvsp[(3) - (3)].nodeValue)); }
     break;
 
   case 80:
 /* Line 1787 of yacc.c  */
-#line 211 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = CreateExpression(TYPE_EXPR_SHIFT_LEFT_OP, (yyvsp[(1) - (3)].sExpressionValue), (yyvsp[(3) - (3)].sExpressionValue)); }
+#line 213 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocExpression(TYPE_EXPR_SHIFT_LEFT_OP, (yyvsp[(1) - (3)].nodeValue), (yyvsp[(3) - (3)].nodeValue)); }
     break;
 
   case 81:
 /* Line 1787 of yacc.c  */
-#line 212 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = CreateExpression(TYPE_EXPR_SHIFT_RIGHT_OP, (yyvsp[(1) - (3)].sExpressionValue), (yyvsp[(3) - (3)].sExpressionValue)); }
+#line 214 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocExpression(TYPE_EXPR_SHIFT_RIGHT_OP, (yyvsp[(1) - (3)].nodeValue), (yyvsp[(3) - (3)].nodeValue)); }
     break;
 
   case 82:
 /* Line 1787 of yacc.c  */
-#line 213 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = CreateExpression(TYPE_EXPR_PLUS_OP, (yyvsp[(1) - (3)].sExpressionValue), (yyvsp[(3) - (3)].sExpressionValue)); }
+#line 215 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocExpression(TYPE_EXPR_PLUS_OP, (yyvsp[(1) - (3)].nodeValue), (yyvsp[(3) - (3)].nodeValue)); }
     break;
 
   case 83:
 /* Line 1787 of yacc.c  */
-#line 214 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = CreateExpression(TYPE_EXPR_MINUS_OP, (yyvsp[(1) - (3)].sExpressionValue), (yyvsp[(3) - (3)].sExpressionValue)); }
+#line 216 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocExpression(TYPE_EXPR_MINUS_OP, (yyvsp[(1) - (3)].nodeValue), (yyvsp[(3) - (3)].nodeValue)); }
     break;
 
   case 84:
 /* Line 1787 of yacc.c  */
-#line 215 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = CreateExpression(TYPE_EXPR_MULTIPLY_OP, (yyvsp[(1) - (3)].sExpressionValue), (yyvsp[(3) - (3)].sExpressionValue)); }
+#line 217 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocExpression(TYPE_EXPR_MULTIPLY_OP, (yyvsp[(1) - (3)].nodeValue), (yyvsp[(3) - (3)].nodeValue)); }
     break;
 
   case 85:
 /* Line 1787 of yacc.c  */
-#line 216 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = CreateExpression(TYPE_EXPR_DIVIDE_OP, (yyvsp[(1) - (3)].sExpressionValue), (yyvsp[(3) - (3)].sExpressionValue)); }
+#line 218 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocExpression(TYPE_EXPR_DIVIDE_OP, (yyvsp[(1) - (3)].nodeValue), (yyvsp[(3) - (3)].nodeValue)); }
     break;
 
   case 86:
 /* Line 1787 of yacc.c  */
-#line 217 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = CreateExpression(TYPE_EXPR_MOD_OP, (yyvsp[(1) - (3)].sExpressionValue), (yyvsp[(3) - (3)].sExpressionValue)); }
+#line 219 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocExpression(TYPE_EXPR_MOD_OP, (yyvsp[(1) - (3)].nodeValue), (yyvsp[(3) - (3)].nodeValue)); }
     break;
 
   case 87:
 /* Line 1787 of yacc.c  */
-#line 218 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = CreateExpression(TYPE_EXPR_BOOL_NOT_OP, (yyvsp[(2) - (2)].sExpressionValue)); }
+#line 220 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocExpression(TYPE_EXPR_BOOL_NOT_OP, (yyvsp[(2) - (2)].nodeValue)); }
     break;
 
   case 88:
 /* Line 1787 of yacc.c  */
-#line 219 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = CreateExpression(TYPE_EXPR_BOOL_COMPLEMENT_OP, (yyvsp[(2) - (2)].sExpressionValue)); }
+#line 221 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocExpression(TYPE_EXPR_BOOL_COMPLEMENT_OP, (yyvsp[(2) - (2)].nodeValue)); }
     break;
 
   case 89:
 /* Line 1787 of yacc.c  */
-#line 220 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = CreateExpression(TYPE_EXPR_UMINUS_INT_OP, (yyvsp[(2) - (2)].intValue)); }
+#line 222 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocExpression(TYPE_EXPR_UMINUS_INT_OP, (yyvsp[(2) - (2)].intValue)); }
     break;
 
   case 90:
 /* Line 1787 of yacc.c  */
-#line 221 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = CreateExpression(TYPE_EXPR_UMINUS_FLOAT_OP, (yyvsp[(2) - (2)].floatValue)); }
+#line 223 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocExpression(TYPE_EXPR_UMINUS_FLOAT_OP, (yyvsp[(2) - (2)].floatValue)); }
     break;
 
   case 91:
 /* Line 1787 of yacc.c  */
-#line 222 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = CreateExpression(TYPE_EXPR_UANIMREF_OP, (yyvsp[(2) - (2)].stringValue)); }
+#line 224 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = AllocExpression(TYPE_EXPR_UANIMREF_OP, (yyvsp[(2) - (2)].stringValue)); }
     break;
 
   case 92:
 /* Line 1787 of yacc.c  */
-#line 223 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = (yyvsp[(1) - (1)].sExpressionValue); }
+#line 225 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = (yyvsp[(1) - (1)].nodeValue); }
     break;
 
   case 93:
 /* Line 1787 of yacc.c  */
-#line 227 "..\\..\\gsc_cod9.y"
-    { (yyval.sExpressionValue) = (yyvsp[(2) - (3)].sExpressionValue); }
+#line 229 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = (yyvsp[(2) - (3)].nodeValue); }
+    break;
+
+  case 105:
+/* Line 1787 of yacc.c  */
+#line 247 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = IdentifierToNode((yyvsp[(1) - (1)].stringValue)); }
+    break;
+
+  case 106:
+/* Line 1787 of yacc.c  */
+#line 248 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = (yyvsp[(1) - (1)].nodeValue); }
+    break;
+
+  case 107:
+/* Line 1787 of yacc.c  */
+#line 249 "..\\..\\gsc_cod9.y"
+    { (yyval.nodeValue) = (yyvsp[(1) - (1)].nodeValue); }
     break;
 
 
 /* Line 1787 of yacc.c  */
-#line 2134 "y.tab.h"
+#line 2381 "y.tab.h"
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -2362,7 +2609,7 @@ yyreturn:
 
 
 /* Line 2050 of yacc.c  */
-#line 326 "..\\..\\gsc_cod9.y"
+#line 328 "..\\..\\gsc_cod9.y"
 
 
 void yyerror(char const *s)
