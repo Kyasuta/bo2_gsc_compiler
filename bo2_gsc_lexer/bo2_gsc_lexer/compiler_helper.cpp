@@ -3,6 +3,8 @@
 /* nodes */
 sNode* AllocNode(ENodeType nodeType)
 {
+	//printf("allocating node %d\n", nodeType);
+
 	sNode* allocatedNode = (sNode*)malloc(sizeof(sNode));
 	assert(allocatedNode != NULL);
 
@@ -36,6 +38,14 @@ sNode* AllocNode(ENodeType nodeType)
 		allocatedNode->expression = (sExpression*)malloc(sizeof(sExpression));
 		assert(allocatedNode->expression != NULL);
 		break;
+	case TYPE_ASSIGNMENT_EXPRESSION:
+		allocatedNode->assignmentExpression = (sAssignmentExpression*)malloc(sizeof(sAssignmentExpression));
+		assert(allocatedNode->assignmentExpression != NULL);
+		break;
+	case TYPE_STATEMENT:
+		allocatedNode->statement = (sStatement*)malloc(sizeof(sStatement));
+		assert(allocatedNode->statement != NULL);
+		break;
 	}
 
 	allocatedNode->nodeType = nodeType;
@@ -43,10 +53,58 @@ sNode* AllocNode(ENodeType nodeType)
 	return allocatedNode;
 }
 
-sNode* IdentifierToNode(char* identifier)
+sNode* IdentifierNode(char* identifierVal)
 {
 	sNode* allocatedNode = AllocNode(TYPE_IDENTIFIER);
-	allocatedNode->stringValue = identifier;
+	allocatedNode->stringValue = identifierVal;
+
+	return allocatedNode;
+}
+
+sNode* PathNode(char* pathVal)
+{
+	sNode* allocatedNode = AllocNode(TYPE_PATH);
+	allocatedNode->stringValue = pathVal;
+
+	return allocatedNode;
+}
+
+sNode* IntNode(int intVal)
+{
+	sNode* allocatedNode = AllocNode(TYPE_INT);
+	allocatedNode->intValue = intVal;
+
+	return allocatedNode;
+}
+
+sNode* FloatNode(float floatVal)
+{
+	sNode* allocatedNode = AllocNode(TYPE_FLOAT);
+	allocatedNode->floatValue = floatVal;
+
+	return allocatedNode;
+}
+
+sNode* StringNode(char* stringVal)
+{
+	sNode* allocatedNode = AllocNode(TYPE_STRING);
+	allocatedNode->stringValue = stringVal;
+
+	return allocatedNode;
+}
+
+sNode* LocStringNode(char* locStringVal)
+{
+	sNode* allocatedNode = AllocNode(TYPE_LOC_STRING);
+	allocatedNode->stringValue = locStringVal;
+
+	return allocatedNode;
+}
+
+sNode* HashStringNode(char* hashStringVal)
+{
+	sNode* allocatedNode = AllocNode(TYPE_HASH_STRING);
+	allocatedNode->stringValue = hashStringVal;
 
 	return allocatedNode;
 }
@@ -102,13 +160,13 @@ sNode* AllocUsingAnimTree(char* animtree)
 	return result;
 }
 
-sNode* AllocFuncDefinition(char* funcName, std::vector<char*>* parameterList/*, sCompoundStatement* compoundStatement*/)
+sNode* AllocFuncDefinition(sNode* funcName, std::vector<sNode*>* parameterList, sNode* compoundStatement)
 {
 	sNode* result = AllocNode(TYPE_FUNC_DEFINITION);
 
 	result->funcDefinition->funcName = funcName;
 	result->funcDefinition->parameterList = parameterList;
-	//result->funcDefinition->compoundStatement = compoundStatement;
+	result->funcDefinition->compoundStatement = compoundStatement;
 
 	return result;
 }
@@ -123,7 +181,7 @@ sNode* AllocIncDecExpression(sNode* expression, int isDec)
 	return result;
 }
 
-sNode* AllocFuncCall(char* funcName, char* gscOfFunc, std::vector<sNode*>* argumentList, int isPtr, sNode* ptrExpression, int isMethod, sNode* methodObject, int isThread)
+sNode* AllocFuncCall(sNode* funcName, sNode* gscOfFunc, std::vector<sNode*>* argumentList, int isPtr, sNode* ptrExpression, int isMethod, sNode* methodObject, int isThread)
 {
 	sNode* result = AllocNode(TYPE_FUNC_CALL);
 
@@ -149,7 +207,7 @@ sNode* AllocArraySubscriptingExpression(sNode* arrayName, sNode* index)
 	return result;
 }
 
-sNode* AllocElementSelectionExpression(sNode* selection, char* selectedElement)
+sNode* AllocElementSelectionExpression(sNode* selection, sNode* selectedElement)
 {
 	sNode* result = AllocNode(TYPE_ELEMENT_SELECTION_EXPRESSION);
 
@@ -159,7 +217,7 @@ sNode* AllocElementSelectionExpression(sNode* selection, char* selectedElement)
 	return result;
 }
 
-sNode* AllocFuncRefExpression(char* gscOfFunc, char* funcName)
+sNode* AllocFuncRefExpression(sNode* gscOfFunc, sNode* funcName)
 {
 	sNode* result = AllocNode(TYPE_FUNC_REF_EXPRESSION);
 
@@ -175,32 +233,29 @@ sNode* AllocExpression(EExpressionType type, ...)
 	va_start(vl, type);
 
 	sNode* result = AllocNode(TYPE_EXPRESSION);
+	result->expression->nodeList = new std::vector<sNode*>();
 
 	switch (type)
 	{
+	case TYPE_EXPR_EMPTY_ARRAY:
+	case TYPE_EXPR_UNDEFINED:
+		break;
 	case TYPE_EXPR_IDENTIFIER:
+	case TYPE_EXPR_UANIMREF_OP:
 	case TYPE_EXPR_STRING:
 	case TYPE_EXPR_LOC_STRING:
 	case TYPE_EXPR_HASH_STRING:
-	case TYPE_EXPR_UANIMREF_OP:
-		result->expression->stringValue = va_arg(vl, char*);
-		break;
 	case TYPE_EXPR_INT:
 	case TYPE_EXPR_UMINUS_INT_OP:
-		result->expression->intValue = va_arg(vl, int);
-		break;
 	case TYPE_EXPR_FLOAT:
 	case TYPE_EXPR_UMINUS_FLOAT_OP:
-		result->expression->floatValue = va_arg(vl, float);
-		break;
-	case TYPE_EXPR_VECTOR:
-		result->expression->nodeList = new std::vector<sNode*>();
+	case TYPE_EXPR_FUNC_CALL_NOTHRD:
+	case TYPE_EXPR_ARRAY_SUBSCRIPTING:
+	case TYPE_EXPR_ELEMENT_SELECTION:
+	case TYPE_EXPR_FUNC_REF:
+	case TYPE_EXPR_BOOL_NOT_OP:
+	case TYPE_EXPR_BOOL_COMPLEMENT_OP:
 		result->expression->nodeList->push_back(va_arg(vl, sNode*));
-		result->expression->nodeList->push_back(va_arg(vl, sNode*));
-		result->expression->nodeList->push_back(va_arg(vl, sNode*));
-		break;
-	case TYPE_EXPR_EMPTY_ARRAY:
-	case TYPE_EXPR_UNDEFINED:
 		break;
 	case TYPE_EXPR_LOGICAL_OR_OP:
 	case TYPE_EXPR_LOGICAL_AND_OP:
@@ -220,22 +275,81 @@ sNode* AllocExpression(EExpressionType type, ...)
 	case TYPE_EXPR_MULTIPLY_OP:
 	case TYPE_EXPR_DIVIDE_OP:
 	case TYPE_EXPR_MOD_OP:
-		result->expression->nodeList = new std::vector<sNode*>();
 		result->expression->nodeList->push_back(va_arg(vl, sNode*));
 		result->expression->nodeList->push_back(va_arg(vl, sNode*));
 		break;
-	case TYPE_EXPR_FUNC_CALL_NOTHRD:
-	case TYPE_EXPR_ARRAY_SUBSCRIPTING:
-	case TYPE_EXPR_ELEMENT_SELECTION:
-	case TYPE_EXPR_FUNC_REF:
-	case TYPE_EXPR_BOOL_NOT_OP:
-	case TYPE_EXPR_BOOL_COMPLEMENT_OP:
-		result->expression->nodeList = new std::vector<sNode*>();
+	case TYPE_EXPR_VECTOR:
+		result->expression->nodeList->push_back(va_arg(vl, sNode*));
+		result->expression->nodeList->push_back(va_arg(vl, sNode*));
 		result->expression->nodeList->push_back(va_arg(vl, sNode*));
 		break;
 	}
 
 	result->expression->type = type;
+
+	va_end(vl);
+
+	return result;
+}
+
+sNode* AllocAssignmentExpression(EAssignmentType type, sNode* lvalue, sNode* rvalue)
+{
+	sNode* result = AllocNode(TYPE_ASSIGNMENT_EXPRESSION);
+
+	result->assignmentExpression->lvalue = lvalue;
+	result->assignmentExpression->rvalue = rvalue;
+
+	return result;
+}
+
+sNode* AllocStatement(EStatementType type, ...)
+{
+	va_list vl;
+	va_start(vl, type);
+
+	sNode* result = AllocNode(TYPE_STATEMENT);
+	
+	if (type == TYPE_COMPOUND_STATEMENT)
+		result->statement->nodeList = va_arg(vl, std::vector<sNode*>*);
+	else
+	{
+		result->statement->nodeList = new std::vector<sNode*>();
+
+		switch (type)
+		{
+		case TYPE_DEFAULT_STATEMENT:
+		case TYPE_CONTINUE_STATEMENT:
+		case TYPE_BREAK_STATEMENT:
+		case TYPE_WAITTILLFRAMEEND_STATEMENT:
+			break;
+		case TYPE_CASE_STATEMENT:
+		case TYPE_RETURN_STATEMENT:
+		case TYPE_WAIT_EXPR_STATEMENT:
+		case TYPE_EXPRESSION_STATEMENT:
+			result->statement->nodeList->push_back(va_arg(vl, sNode*));
+			break;
+		case TYPE_IF_STATEMENT:
+		case TYPE_SWITCH_STATEMENT:
+		case TYPE_WHILE_STATEMENT:
+			result->statement->nodeList->push_back(va_arg(vl, sNode*));
+			result->statement->nodeList->push_back(va_arg(vl, sNode*));
+			break;
+		case TYPE_IF_ELSE_STATEMENT:
+		case TYPE_FOREACH_STATEMENT:
+			result->statement->nodeList->push_back(va_arg(vl, sNode*));
+			result->statement->nodeList->push_back(va_arg(vl, sNode*));
+			result->statement->nodeList->push_back(va_arg(vl, sNode*));
+			break;
+		case TYPE_FOR_STATEMENT:
+			result->statement->nodeList->push_back(va_arg(vl, sNode*));
+			result->statement->nodeList->push_back(va_arg(vl, sNode*));
+			result->statement->nodeList->push_back(va_arg(vl, sNode*));
+			result->statement->nodeList->push_back(va_arg(vl, sNode*));
+			break;
+		}
+	}
+	
+	result->statement->type = type;
 
 	va_end(vl);
 

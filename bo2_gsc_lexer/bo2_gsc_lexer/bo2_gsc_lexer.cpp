@@ -76,19 +76,36 @@ void recursive_yyparse(char* dir)
 	}
 }
 
+// loop all nodes, check for all strings if its same as another string
+// create sCompilerString* and change node type
+void CompileStrings()
+{
+
+}
+
 void OnParsingComplete(std::vector<sNode*>* sourceCode)
 {
 	sNode* curNode;
-
 	for (std::vector<sNode*>::iterator it = sourceCode->begin(); it < sourceCode->end(); it++)
 	{
 		curNode = *it;
 
-		printf("%d ", curNode->nodeType);
+		if (curNode->nodeType == TYPE_FUNC_DEFINITION)
+		{
+			printf("%s\n", curNode->funcDefinition->funcName->stringValue);
 
-		FreeNode(curNode);
+			if (curNode->funcDefinition->compoundStatement->statement->nodeList)
+			{
+				for (std::vector<sNode*>::iterator it2 = curNode->funcDefinition->compoundStatement->statement->nodeList->begin();
+					it2 < curNode->funcDefinition->compoundStatement->statement->nodeList->end(); it2++)
+				{
+					if ((*it2)->nodeType == TYPE_STATEMENT && (*it2)->statement->type == TYPE_EXPRESSION_STATEMENT && (*it2)->statement->nodeList->at(0)->nodeType == TYPE_FUNC_CALL)
+						printf("%s\n", (*it2)->statement->nodeList->at(0)->funcCall->funcName->stringValue);
+				}
+			}
+		}
 	}
-	
+
 	printf("\n");
 }
 

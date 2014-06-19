@@ -3,180 +3,135 @@
 #include <cassert>
 #include <cstdarg>
 
-// need to add expressions here
-
-/*struct sStatement;
+struct sNode;
+struct sStatement;
 
 enum EStatementType
 {
-	TYPE_LABELED_STATEMENT,
-	TYPE_JUMP_STATEMENT,
-	TYPE_WAIT_STATEMENT,
+	TYPE_CASE_STATEMENT,
+	TYPE_DEFAULT_STATEMENT,
+
+	TYPE_CONTINUE_STATEMENT,
+	TYPE_BREAK_STATEMENT,
+	TYPE_RETURN_STATEMENT,
+
+	TYPE_WAIT_EXPR_STATEMENT,
+	TYPE_WAITTILLFRAMEEND_STATEMENT,
+
 	TYPE_EXPRESSION_STATEMENT,
+
 	TYPE_COMPOUND_STATEMENT,
-	TYPE_SELECTION_STATEMENT,
-	TYPE_ITERATION_STATEMENT
+
+	TYPE_IF_STATEMENT,
+	TYPE_IF_ELSE_STATEMENT,
+	TYPE_SWITCH_STATEMENT,
+
+	TYPE_FOR_STATEMENT,
+	TYPE_WHILE_STATEMENT,
+	TYPE_FOREACH_STATEMENT
 };
 
-enum ELabelType
+/*struct sLabeledStatement
 {
-	TYPE_CASE,
-	TYPE_DEFAULT
-};
-
-struct sLabeledStatement
-{
-	ELabelType type;
-	char* labelName; // only if type is TYPE_CASE
-};
-
-enum EJumpType
-{
-	TYPE_CONTINUE,
-	TYPE_BREAK,
-	TYPE_RETURN,
-	TYPE_RETURN_EXPRESSION
+	union
+	{
+		int caseInt;		// TYPE_CASE_INT_STATEMENT
+		char* caseString;	// TYPE_CASE_STRING_STATEMENT
+	};
 };
 
 struct sJumpStatement
 {
-	EJumpType type;
-	//gsc_expression* returnExpression; // only if type is TYPE_RETURN_EXPRESSION
-};
-
-enum EWaitType
-{
-	TYPE_WAIT,
-	TYPE_WAITTILLFRAMEEND
+	sNode* returnExpr; // TYPE_RETURN_EXPR_STATEMENT
 };
 
 struct sWaitStatement
 {
-	EWaitType type;
-	int amount; // only if type is TYPE_WAIT
-};
-
-enum EExpressionStatementType
-{
-	TYPE_NOTHING,
-	TYPE_INC_OR_DEC_EXPRESSION,
-	TYPE_FUNCTION_CALL_NO_THRD_EXPRESSION,
-	TYPE_FUNCTION_CALL_THRD_EXPRESSION,
-	TYPE_ASSIGNMENT_EXPRESSION
+	sNode* waitExpr; // TYPE_WAIT_EXPR_STATEMENT
 };
 
 struct sExpressionStatement
 {
-	EExpressionStatementType type;
-	union
-	{
-		//gsc_inc_or_dec_expression* inc_or_dec_expression;
-		//gsc_function_call_no_thrd_expression* function_call_no_thrd_expression;
-		//gsc_function_call_thrd_expression* gsc_function_call_no_thrd_expression;
-		//gsc_assignment_expression* assignment_expression;
-	};
+	sNode* expression;
 };
 
 struct sCompoundStatement
 {
-	int numOfStatements;
-	sStatement** statements;
+	std::vector<sNode*>* statementList;
 };
 
-enum ESelectionType
+struct sIfStatement
 {
-	TYPE_IF,
-	TYPE_IF_ELSE,
-	TYPE_SWITCH
+	sNode* ifExpression;
+	sNode* ifStatement;
 };
 
-struct sSelectionStatement
+struct sIfElseStatement
 {
-	ESelectionType type;
-	//gsc_expression* expression; // need to implement expressions first
-	int numOfStatements;
-	sStatement* statements;
+	sNode* ifExpression;
+	sNode* ifStatement;
+	sNode* elseStatement;
 };
 
-enum EIterationType
+struct sSwitchStatement
 {
-	TYPE_FOR,
-	TYPE_WHILE,
-	//TYPE_FOREACH // not implemented yet
+	sNode* switchExpression;
+	sNode* switchCompoundStatement;
 };
 
-enum EForModifyValueType
+struct sForStatement
 {
-	TYPE_FORMODIFYVAL_INC_OR_DEC_EXPRESSION,
-	TYPE_FORMODIFYVAL_ASSIGNMENT_EXPRESSION
+	sNode* forInitExpression;
+	sNode* forCondExpression;
+	sNode* forLoopExpression;
 };
 
-struct sForModifyValue
+struct sWhileStatement
 {
-	EForModifyValueType type;
-	union
-	{
-		//gsc_inc_or_dec_expression* inc_or_dec_expression;
-		//gsc_assignment_expression* assignment_expression; // need to implement expressions first
-	};
+	sNode* whileExpression;
+	sNode* whileStatement;
 };
 
-struct sForLoop
+struct sForeachStatement
 {
-	//gsc_assignment_expression* initValue;
-	//gsc_expression* condition;
-	sForModifyValue* modifyValue;
-
-	int numOfStatements;
-	sStatement** statements;
-};
-
-struct sWhileLoop
-{
-	//gsc_expression* condition;
-
-	int numOfStatements;
-	sStatement** statements;
-};
-
-struct sIterationStatement
-{
-	EIterationType type;
-	union
-	{
-		sForLoop* forLoop;
-		sWhileLoop* whileLoop;
-	};
-};
+	sNode* foreachElement;
+	sNode* foreachExpression;
+	sNode* foreachStatement;
+};*/
 
 struct sStatement
 {
 	EStatementType type;
-	union
+	std::vector<sNode*>* nodeList;
+	/*union
 	{
 		sLabeledStatement* labeledStatement;
 		sJumpStatement* jumpStatement;
 		sWaitStatement* waitStatement;
 		sExpressionStatement* expressionStatement;
 		sCompoundStatement* compoundStatement;
-		sSelectionStatement* selectionStatement;
-		sIterationStatement* iterationStatement;
-	};
-};*/
+		sIfStatement* ifStatement;
+		sIfElseStatement* ifElseStatement;
+		sSwitchStatement* switchStatement;
+		sForStatement* forStatement;
+		sWhileStatement* whileStatement;
+		sForeachStatement* foreachStatement;
+	};*/
+};
 
 /* nodes */
-
-struct sNode;
 
 enum ENodeType
 {
 	// literals
 	TYPE_IDENTIFIER,
+	TYPE_PATH,
 	TYPE_INT,
 	TYPE_FLOAT,
 	TYPE_STRING,
 	TYPE_LOC_STRING,
 	TYPE_HASH_STRING,
+	TYPE_COMPILED_STRING, // all identifiers and strings are converted to this type after CompileStrings is called
 	TYPE_INCLUDE,
 	TYPE_USINGANIMTREE,
 
@@ -187,14 +142,21 @@ enum ENodeType
 	TYPE_ARRAY_SUBSCRIPTING_EXPRESSION,
 	TYPE_ELEMENT_SELECTION_EXPRESSION,
 	TYPE_FUNC_REF_EXPRESSION,
-	TYPE_EXPRESSION
+	TYPE_EXPRESSION,
+	TYPE_ASSIGNMENT_EXPRESSION,
+	TYPE_STATEMENT
+};
+
+struct sCompiledString
+{
+	unsigned __int32 stringOffset;
 };
 
 struct sFuncDefinition
 {
-	char* funcName;
-	std::vector<char*>* parameterList;
-	//sCompoundStatement* compoundStatement;
+	sNode* funcName;
+	std::vector<sNode*>* parameterList;
+	sNode* compoundStatement;
 };
 
 struct sIncDecExpression
@@ -205,8 +167,8 @@ struct sIncDecExpression
 
 struct sFuncCall
 {
-	char* funcName;
-	char* gscOfFunc;
+	sNode* funcName;
+	sNode* gscOfFunc;
 
 	std::vector<sNode*>* argumentList;
 
@@ -230,13 +192,13 @@ struct sArraySubscriptingExpression
 struct sElementSelectionExpression
 {
 	sNode* selection;
-	char* selectedElement;
+	sNode* selectedElement;
 };
 
 struct sFuncRefExpression
 {
-	char* gscOfFunc;
-	char* funcName;
+	sNode* gscOfFunc;
+	sNode* funcName;
 };
 
 enum EExpressionType
@@ -282,26 +244,42 @@ enum EExpressionType
 struct sExpression
 {
 	EExpressionType type;
-	union
-	{
-		int intValue;
-		float floatValue;
-		char* stringValue;
-		std::vector<sNode*>* nodeList;
-	};
+	std::vector<sNode*>* nodeList;
 };
 
+enum EAssignmentType
+{
+	TYPE_REGULAR_ASSIGN,
+	TYPE_PLUS_ASSIGN,
+	TYPE_MINUS_ASSIGN,
+	TYPE_MULTIPLY_ASSIGN,
+	TYPE_DIVIDE_ASSIGN,
+	TYPE_MOD_ASSIGN,
+	TYPE_SHIFT_LEFT_ASSIGN,
+	TYPE_SHIFT_RIGHT_ASSIGN,
+	TYPE_BIT_AND_ASSIGN,
+	TYPE_BIT_EX_OR_ASSIGN,
+	TYPE_BIT_OR_ASSIGN
+};
+
+struct sAssignmentExpression
+{
+	EAssignmentType type;
+	sNode* lvalue;
+	sNode* rvalue;
+};
+
+// add string info for compiler?
+// like sCompiledString* stringValue
 struct sNode
 {
 	ENodeType nodeType;
 	union
 	{
-		// literals
 		int intValue;
 		float floatValue;
-		char* stringValue; // used for TYPE_LOC_STRING_LITERAL and TYPE_HASH_STRING_LITERAL too
-
-		// structures
+		char* stringValue; // used for TYPE_IDENTIFIER, TYPE_PATH, TYPE_LOC_STRING_LITERAL and TYPE_HASH_STRING_LITERAL too
+		sCompiledString* compiledString;
 		sFuncDefinition* funcDefinition;
 		sIncDecExpression* incDecExpression;
 		sFuncCall* funcCall;
@@ -309,21 +287,31 @@ struct sNode
 		sElementSelectionExpression* elementSelectionExpression;
 		sFuncRefExpression* funcRefExpression;
 		sExpression* expression;
+		sAssignmentExpression* assignmentExpression;
+		sStatement* statement;
 	};
 };
 
 /* node allocation */
 sNode* AllocInclude(char* filedir);
 sNode* AllocUsingAnimTree(char* animtree);
-sNode* AllocFuncDefinition(char* funcName, std::vector<char*>* parameterList/*, sCompoundStatement* compoundStatement*/);
+sNode* AllocFuncDefinition(sNode* funcName, std::vector<sNode*>* parameterList, sNode* compoundStatement);
 sNode* AllocIncDecExpression(sNode* expression, int isDec);
-sNode* AllocFuncCall(char* funcName, char* gscOfFunc, std::vector<sNode*>* argumentList, int isPtr, sNode* ptrExpression, int isMethod, sNode* methodObject, int isThread);
+sNode* AllocFuncCall(sNode* funcName, sNode* gscOfFunc, std::vector<sNode*>* argumentList, int isPtr, sNode* ptrExpression, int isMethod, sNode* methodObject, int isThread);
 sNode* AllocArraySubscriptingExpression(sNode* arrayName, sNode* index);
-sNode* AllocElementSelectionExpression(sNode* selection, char* selectedElement);
-sNode* AllocFuncRefExpression(char* gscOfFunc, char* funcName);
+sNode* AllocElementSelectionExpression(sNode* selection, sNode* selectedElement);
+sNode* AllocFuncRefExpression(sNode* gscOfFunc, sNode* funcName);
 sNode* AllocExpression(EExpressionType type, ...);
+sNode* AllocAssignmentExpression(EAssignmentType type, sNode* lvalue, sNode* rvalue);
+sNode* AllocStatement(EStatementType type, ...);
 
-sNode* IdentifierToNode(char* identifier);
+sNode* IdentifierNode(char* identifierVal);
+sNode* PathNode(char* pathVal);
+sNode* IntNode(int intVal);
+sNode* FloatNode(float floatVal);
+sNode* StringNode(char* stringVal);
+sNode* LocStringNode(char* locStringVal);
+sNode* HashStringNode(char* hashStringVal);
 
 /* node freeing */
 void FreeNode(sNode* node);

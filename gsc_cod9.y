@@ -16,7 +16,6 @@ void OnParsingComplete(std::vector<sNode*>* sourceCode);
 	float floatValue;
 	char* stringValue;
 	sNode* nodeValue;
-	std::vector<char*>* stringArrayValue;
 	std::vector<sNode*>* nodeArrayValue;
 }
 
@@ -37,11 +36,11 @@ void OnParsingComplete(std::vector<sNode*>* sourceCode);
 
 %type <nodeValue> include using_animtree func_definition inc_dec_expression func_call_noptr func_call_ptr func_call_nothrd_expression func_call_thrd_expression
 %type <nodeValue> func_valid_object array_valid_name array_subscripting_expression element_selection_expression element_valid_selection func_ref_expression
-%type <nodeValue> expression parenthesized_expression assignment_expression operation_valid_lvalue
+%type <nodeValue> expression parenthesized_expression assignment_expression operation_valid_lvalue statement labeled_statement jump_statement wait_statement
+%type <nodeValue> expression_statement compound_statement selection_statement iteration_statement for_init_expression for_cond_expression for_loop_expression
 
 %type <intValue> inc_dec
-%type <stringArrayValue> parameter_list_opt
-%type <nodeArrayValue> source_code argument_list_opt
+%type <nodeArrayValue> source_code parameter_list_opt argument_list_opt statement_list
 
 /* precedences (shift/reduce conflict resolving) */
 %nonassoc IFX
@@ -88,18 +87,18 @@ using_animtree
 	;
 
 func_definition
-	: IDENTIFIER '(' parameter_list_opt ')' compound_statement	{ $$ = AllocFuncDefinition($1, $3/*, $5*/); }
+	: IDENTIFIER '(' parameter_list_opt ')' compound_statement	{ $$ = AllocFuncDefinition(IdentifierNode($1), $3, $5); }
 	;
 
 parameter_list_opt
 	: /* empty */												{ $$ = 0; }
-	| IDENTIFIER												{ $$ = new std::vector<char*>(1, $1); }
-	| parameter_list_opt ',' IDENTIFIER							{ $$ = $1; $$->push_back($3); }
+	| IDENTIFIER												{ $$ = new std::vector<sNode*>(1, IdentifierNode($1)); }
+	| parameter_list_opt ',' IDENTIFIER							{ $$ = $1; $$->push_back(IdentifierNode($3)); }
 	;
 
 /* add func_call_expression inc_dec ? */
 inc_dec_expression
-	: IDENTIFIER inc_dec										{ $$ = AllocIncDecExpression(IdentifierToNode($1), $2); }
+	: IDENTIFIER inc_dec										{ $$ = AllocIncDecExpression(IdentifierNode($1), $2); }
 	| array_subscripting_expression inc_dec						{ $$ = AllocIncDecExpression($1, $2); }
 	| element_selection_expression inc_dec						{ $$ = AllocIncDecExpression($1, $2); }
 	;
@@ -111,9 +110,9 @@ inc_dec
 
 /* non-pointer function call */
 func_call_noptr
-	: IDENTIFIER '(' argument_list_opt ')'									{ $$ = AllocFuncCall($1, 0, $3, 0, 0, 0, 0, 0); }
-	| PATH REFERENCE_FUNC IDENTIFIER '(' argument_list_opt ')'				{ $$ = AllocFuncCall($3, $1, $5, 0, 0, 0, 0, 0); }
-	| IDENTIFIER REFERENCE_FUNC IDENTIFIER '(' argument_list_opt ')'		{ $$ = AllocFuncCall($3, $1, $5, 0, 0, 0, 0, 0); }
+	: IDENTIFIER '(' argument_list_opt ')'									{ $$ = AllocFuncCall(IdentifierNode($1), 0, $3, 0, 0, 0, 0, 0); }
+	| PATH REFERENCE_FUNC IDENTIFIER '(' argument_list_opt ')'				{ $$ = AllocFuncCall(IdentifierNode($3), PathNode($1), $5, 0, 0, 0, 0, 0); }
+	| IDENTIFIER REFERENCE_FUNC IDENTIFIER '(' argument_list_opt ')'		{ $$ = AllocFuncCall(IdentifierNode($3), IdentifierNode($1), $5, 0, 0, 0, 0, 0); }
 	;
 
 /* pointer function call */
@@ -145,7 +144,7 @@ func_call_thrd_expression
 
 /* things that are syntactically valid to be a function's method object */
 func_valid_object
-	: IDENTIFIER												{ $$ = IdentifierToNode($1); }
+	: IDENTIFIER												{ $$ = IdentifierNode($1); }
 	| func_call_nothrd_expression								{ $$ = $1; }
 	| array_subscripting_expression								{ $$ = $1; }
 	| element_selection_expression								{ $$ = $1; }
@@ -158,7 +157,7 @@ array_subscripting_expression
 
 /* expressions that are syntactically valid to be a name of an array */
 array_valid_name
-	: IDENTIFIER												{ $$ = IdentifierToNode($1); }
+	: IDENTIFIER												{ $$ = IdentifierNode($1); }
 	| func_call_nothrd_expression								{ $$ = $1; }
 	| array_subscripting_expression								{ $$ = $1; }
 	| element_selection_expression								{ $$ = $1; }
@@ -167,12 +166,12 @@ array_valid_name
 
 /* identifier might be a keyword, size */
 element_selection_expression
-	: element_valid_selection '.' IDENTIFIER					{ $$ = AllocElementSelectionExpression($1, $3); }
+	: element_valid_selection '.' IDENTIFIER					{ $$ = AllocElementSelectionExpression($1, IdentifierNode($3)); }
 	;
 
 /* things that are syntactically valid to be selected through "." */
 element_valid_selection
-	: IDENTIFIER												{ $$ = IdentifierToNode($1); }
+	: IDENTIFIER												{ $$ = IdentifierNode($1); }
 	| func_call_nothrd_expression								{ $$ = $1; }
 	| array_subscripting_expression								{ $$ = $1; }
 	| element_selection_expression								{ $$ = $1; }
@@ -180,18 +179,18 @@ element_valid_selection
 	;
 
 func_ref_expression
-	: REFERENCE_FUNC IDENTIFIER									{ $$ = AllocFuncRefExpression(0, $2); }
-	| IDENTIFIER REFERENCE_FUNC IDENTIFIER						{ $$ = AllocFuncRefExpression($1, $3); }
-	| PATH REFERENCE_FUNC IDENTIFIER							{ $$ = AllocFuncRefExpression($1, $3); }
+	: REFERENCE_FUNC IDENTIFIER									{ $$ = AllocFuncRefExpression(0, IdentifierNode($2)); }
+	| IDENTIFIER REFERENCE_FUNC IDENTIFIER						{ $$ = AllocFuncRefExpression(IdentifierNode($1), IdentifierNode($3)); }
+	| PATH REFERENCE_FUNC IDENTIFIER							{ $$ = AllocFuncRefExpression(PathNode($1), IdentifierNode($3)); }
 	;
 
 expression
-	: IDENTIFIER												{ $$ = AllocExpression(TYPE_EXPR_IDENTIFIER, $1); }
-	| INT_LITERAL												{ $$ = AllocExpression(TYPE_EXPR_INT, $1); }
-	| FLOAT_LITERAL												{ $$ = AllocExpression(TYPE_EXPR_FLOAT, $1); }
-	| STRING_LITERAL											{ $$ = AllocExpression(TYPE_EXPR_STRING, $1); }
-	| LOC_STRING_LITERAL										{ $$ = AllocExpression(TYPE_EXPR_LOC_STRING, $1); }
-	| HASH_STRING_LITERAL										{ $$ = AllocExpression(TYPE_EXPR_HASH_STRING, $1); }
+	: IDENTIFIER												{ $$ = AllocExpression(TYPE_EXPR_IDENTIFIER, IdentifierNode($1)); }
+	| INT_LITERAL												{ $$ = AllocExpression(TYPE_EXPR_INT, IntNode($1)); }
+	| FLOAT_LITERAL												{ $$ = AllocExpression(TYPE_EXPR_FLOAT, FloatNode($1)); }
+	| STRING_LITERAL											{ $$ = AllocExpression(TYPE_EXPR_STRING, StringNode($1)); }
+	| LOC_STRING_LITERAL										{ $$ = AllocExpression(TYPE_EXPR_LOC_STRING, LocStringNode($1)); }
+	| HASH_STRING_LITERAL										{ $$ = AllocExpression(TYPE_EXPR_HASH_STRING, HashStringNode($1)); }
 	| '(' expression ',' expression ',' expression ')'			{ $$ = AllocExpression(TYPE_EXPR_VECTOR, $2, $4, $6); }
 	| EMPTY_ARRAY												{ $$ = AllocExpression(TYPE_EXPR_EMPTY_ARRAY); }
 	| UNDEFINED													{ $$ = AllocExpression(TYPE_EXPR_UNDEFINED); }
@@ -230,99 +229,98 @@ parenthesized_expression
 	;
 
 assignment_expression
-	: operation_valid_lvalue '=' expression
-	| operation_valid_lvalue PLUS_ASSIGN expression
-	| operation_valid_lvalue MINUS_ASSIGN expression
-	| operation_valid_lvalue MULTIPLY_ASSIGN expression
-	| operation_valid_lvalue DIVIDE_ASSIGN expression
-	| operation_valid_lvalue MOD_ASSIGN expression
-	| operation_valid_lvalue SHIFT_LEFT_ASSIGN expression
-	| operation_valid_lvalue SHIFT_RIGHT_ASSIGN expression
-	| operation_valid_lvalue BIT_AND_ASSIGN expression
-	| operation_valid_lvalue BIT_EX_OR_ASSIGN expression
-	| operation_valid_lvalue BIT_OR_ASSIGN expression
+	: operation_valid_lvalue '=' expression						{ $$ = AllocAssignmentExpression(TYPE_REGULAR_ASSIGN, $1, $3); }
+	| operation_valid_lvalue PLUS_ASSIGN expression				{ $$ = AllocAssignmentExpression(TYPE_PLUS_ASSIGN, $1, $3); }
+	| operation_valid_lvalue MINUS_ASSIGN expression			{ $$ = AllocAssignmentExpression(TYPE_MINUS_ASSIGN, $1, $3); }
+	| operation_valid_lvalue MULTIPLY_ASSIGN expression			{ $$ = AllocAssignmentExpression(TYPE_MULTIPLY_ASSIGN, $1, $3); }
+	| operation_valid_lvalue DIVIDE_ASSIGN expression			{ $$ = AllocAssignmentExpression(TYPE_DIVIDE_ASSIGN, $1, $3); }
+	| operation_valid_lvalue MOD_ASSIGN expression				{ $$ = AllocAssignmentExpression(TYPE_MOD_ASSIGN, $1, $3); }
+	| operation_valid_lvalue SHIFT_LEFT_ASSIGN expression		{ $$ = AllocAssignmentExpression(TYPE_SHIFT_LEFT_ASSIGN, $1, $3); }
+	| operation_valid_lvalue SHIFT_RIGHT_ASSIGN expression		{ $$ = AllocAssignmentExpression(TYPE_SHIFT_RIGHT_ASSIGN, $1, $3); }
+	| operation_valid_lvalue BIT_AND_ASSIGN expression			{ $$ = AllocAssignmentExpression(TYPE_BIT_AND_ASSIGN, $1, $3); }
+	| operation_valid_lvalue BIT_EX_OR_ASSIGN expression		{ $$ = AllocAssignmentExpression(TYPE_BIT_EX_OR_ASSIGN, $1, $3); }
+	| operation_valid_lvalue BIT_OR_ASSIGN expression			{ $$ = AllocAssignmentExpression(TYPE_BIT_OR_ASSIGN, $1, $3); }
 	;
 
 operation_valid_lvalue
-	: IDENTIFIER												{ $$ = IdentifierToNode($1); }
+	: IDENTIFIER												{ $$ = IdentifierNode($1); }
 	| array_subscripting_expression								{ $$ = $1; }
 	| element_selection_expression								{ $$ = $1; }
 	;
 
 statement
-	: labeled_statement
-	| jump_statement
-	| wait_statement
-	| expression_statement
-	| compound_statement
-	| selection_statement
-	| iteration_statement
+	: labeled_statement											{ $$ = $1; }
+	| jump_statement											{ $$ = $1; }
+	| wait_statement											{ $$ = $1; }
+	| expression_statement										{ $$ = $1; }
+	| compound_statement										{ $$ = $1; }
+	| selection_statement										{ $$ = $1; }
+	| iteration_statement										{ $$ = $1; }
 	;
 
-/* special statement lists that are for switch & loops only (special keywords: case, default, break, continue) */
 labeled_statement
-	: CASE INT_LITERAL ':'
-	| CASE STRING_LITERAL ':'
-	| DEFAULT ':'
+	: CASE INT_LITERAL ':'										{ $$ = AllocStatement(TYPE_CASE_STATEMENT, IntNode($2)); }
+	| CASE STRING_LITERAL ':'									{ $$ = AllocStatement(TYPE_CASE_STATEMENT, StringNode($2)); }
+	| DEFAULT ':'												{ $$ = AllocStatement(TYPE_DEFAULT_STATEMENT); }
 	;
 
 jump_statement
-	: CONTINUE ';'
-	| BREAK ';'
-	| RETURN ';'
-	| RETURN expression ';'
+	: CONTINUE ';'												{ $$ = AllocStatement(TYPE_CONTINUE_STATEMENT); }
+	| BREAK ';'													{ $$ = AllocStatement(TYPE_BREAK_STATEMENT); }
+	| RETURN ';'												{ $$ = AllocStatement(TYPE_RETURN_STATEMENT, 0); }
+	| RETURN expression ';'										{ $$ = AllocStatement(TYPE_RETURN_STATEMENT, $2); }
 	;
 
 wait_statement
-	: WAIT expression ';'
-	| WAITTILLFRAMEEND ';'
-	;
-
-for_init_value_opt
-	: /* empty */
-	| assignment_expression
-	;
-
-for_condition_opt
-	: /* empty */
-	| expression
-	;
-
-for_modify_value_opt
-	: /* empty */
-	| inc_dec_expression
-	| assignment_expression
+	: WAIT expression ';'										{ $$ = AllocStatement(TYPE_WAIT_EXPR_STATEMENT, $2); }
+	| WAITTILLFRAMEEND ';'										{ $$ = AllocStatement(TYPE_WAITTILLFRAMEEND_STATEMENT); }
 	;
 
 /* not putting expression here because it doesn't do anything */
 expression_statement
-	: ';'
-	| inc_dec_expression ';'
-	| func_call_nothrd_expression ';'
-	| func_call_thrd_expression ';'
-	| assignment_expression ';'
+	: ';'														{ $$ = AllocStatement(TYPE_EXPRESSION_STATEMENT, 0); }
+	| inc_dec_expression ';'									{ $$ = AllocStatement(TYPE_EXPRESSION_STATEMENT, $1); }
+	| func_call_nothrd_expression ';'							{ $$ = AllocStatement(TYPE_EXPRESSION_STATEMENT, $1); }
+	| func_call_thrd_expression ';'								{ $$ = AllocStatement(TYPE_EXPRESSION_STATEMENT, $1); }
+	| assignment_expression ';'									{ $$ = AllocStatement(TYPE_EXPRESSION_STATEMENT, $1); }
 	;
 
 compound_statement
-	: '{' '}'
-	| '{' statement_list '}'
+	: '{' '}'													{ $$ = AllocStatement(TYPE_COMPOUND_STATEMENT, 0); }
+	| '{' statement_list '}'									{ $$ = AllocStatement(TYPE_COMPOUND_STATEMENT, $2); }
 	;
 
 statement_list
-	: statement
-	| statement_list statement
+	: statement													{ $$ = new std::vector<sNode*>(1, $1); }
+	| statement_list statement									{ $$ = $1; $$->push_back($2); }
 	;
 
 selection_statement
-	: IF '(' expression ')' statement %prec IFX
-	| IF '(' expression ')' statement ELSE statement
-	| SWITCH '(' expression ')' compound_statement
+	: IF '(' expression ')' statement %prec IFX					{ $$ = AllocStatement(TYPE_IF_STATEMENT, $3, $5); }
+	| IF '(' expression ')' statement ELSE statement			{ $$ = AllocStatement(TYPE_IF_ELSE_STATEMENT, $3, $5, $7); }
+	| SWITCH '(' expression ')' compound_statement				{ $$ = AllocStatement(TYPE_SWITCH_STATEMENT, $3, $5); }
 	;
 
 iteration_statement
-	: FOR '(' for_init_value_opt ';' for_condition_opt ';' for_modify_value_opt ')' statement
-	| WHILE '(' expression ')' statement
-	| FOREACH '(' IDENTIFIER IN expression ')' statement
+	: FOR '(' for_init_expression ';' for_cond_expression ';' for_loop_expression ')' statement		{ $$ = AllocStatement(TYPE_FOR_STATEMENT, $3, $5, $7, $9); }
+	| WHILE '(' expression ')' statement						{ $$ = AllocStatement(TYPE_WHILE_STATEMENT, $3, $5); }
+	| FOREACH '(' IDENTIFIER IN expression ')' statement		{ $$ = AllocStatement(TYPE_FOREACH_STATEMENT, $3, $5, $7); }
+	;
+
+for_init_expression
+	: /* empty */												{ $$ = 0; }
+	| assignment_expression										{ $$ = $1; }
+	;
+
+for_cond_expression
+	: /* empty */												{ $$ = 0; }
+	| expression												{ $$ = $1; }
+	;
+
+for_loop_expression
+	: /* empty */												{ $$ = 0; }
+	| inc_dec_expression										{ $$ = $1; }
+	| assignment_expression										{ $$ = $1; }
 	;
 
 %%
