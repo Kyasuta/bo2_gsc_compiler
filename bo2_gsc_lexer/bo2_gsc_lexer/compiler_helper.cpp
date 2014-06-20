@@ -168,20 +168,22 @@ sNode* LiteralToNode(ENodeType literalType, T literalValue)
 
 sNode* AllocInclude(char* filedir)
 {
-	sNode* result = AllocNode(TYPE_INCLUDE);
+	sNode* allocatedNode = AllocNode(TYPE_INCLUDE);
+	allocatedNode->stringValue = filedir;
 
-	result->stringValue = filedir;
+	compiler->strings.push_back(allocatedNode);
 
-	return result;
+	return allocatedNode;
 }
 
 sNode* AllocUsingAnimTree(char* animtree)
 {
-	sNode* result = AllocNode(TYPE_USINGANIMTREE);
+	sNode* allocatedNode = AllocNode(TYPE_USINGANIMTREE);
+	allocatedNode->stringValue = animtree;
 
-	result->stringValue = animtree;
+	compiler->strings.push_back(allocatedNode);
 
-	return result;
+	return allocatedNode;
 }
 
 sNode* AllocFuncDefinition(sNode* funcName, std::vector<sNode*>* parameterList, sNode* compoundStatement)

@@ -77,41 +77,131 @@ void recursive_yyparse(char* dir)
 	}
 }
 
-// NOT ALL STRINGS
+void CompileError(char* errorString, ...)
+{
+	va_list ap;
+	
+	va_start(ap, errorString);
+	int length = _vscprintf(errorString, ap);
+	va_end(ap);
+
+	char* allocatedString = (char*)malloc(length + 1);
+
+	va_start(ap, errorString);
+	_vsnprintf_s(allocatedString, length + 1, length + 1, errorString, ap);
+	va_end(ap);
+
+	MessageBoxA(NULL, allocatedString, NULL, MB_ICONERROR | MB_OK);
+
+	free(allocatedString);
+	ExitProcess(-1);
+}
+
+bool MustCompileString(sNode* stringNode)
+{
+	// check if its already compiled or its a keyword
+	return stringNode->nodeType != TYPE_COMPILED_STRING
+		&& strcmp(stringNode->stringValue, "level")
+		&& strcmp(stringNode->stringValue, "anim")
+		&& strcmp(stringNode->stringValue, "self")
+		&& strcmp(stringNode->stringValue, "game"); // not sure if this last one is needed
+}
+
 void CompileStrings()
 {
 	sNode* curString;
+	sNode* curString2;
+	char* stringValue;
+
+	// compile strings in compiler->strings
 	for (std::vector<sNode*>::iterator it = compiler->strings.begin(); it < compiler->strings.end(); it++)
 	{
 		curString = *it;
 
-		compiler->AddBytes(curString->stringValue, strlen(curString->stringValue) + 1);
+		if (!MustCompileString(curString))
+			continue;
+
+		// backup string value
+		stringValue = curString->stringValue;
+
+		// allocate compiledString struct (overwrites stringValue)
+		curString->compiledString = (sCompiledString*)malloc(sizeof(sCompiledString));
+
+		// compile string
+		curString->compiledString->type = curString->nodeType;
+		curString->compiledString->stringValue = stringValue;
+		curString->compiledString->offset = compiler->GetRelPos();
+		compiler->AddBytes(curString->compiledString->stringValue, strlen(curString->compiledString->stringValue) + 1);
+		curString->nodeType = TYPE_COMPILED_STRING;
+
+		// check if there's any other string with the same content, if yes, then compile those too
+		for (std::vector<sNode*>::iterator it2 = compiler->strings.begin(); it2 < compiler->strings.end(); it2++)
+		{
+			curString2 = *it2;
+
+			if (curString2 != curString && !strcmp(curString2->stringValue, curString->compiledString->stringValue))
+			{
+				assert(curString2->nodeType != TYPE_COMPILED_STRING);
+
+				stringValue = curString2->stringValue;
+
+				curString2->compiledString = (sCompiledString*)malloc(sizeof(sCompiledString));
+
+				curString2->compiledString->type = curString2->nodeType;
+				curString2->compiledString->stringValue = stringValue;
+				curString2->compiledString->offset = curString->compiledString->offset;
+				curString2->nodeType = TYPE_COMPILED_STRING;
+			}
+		}
 	}
 }
 
-void EmitInclude(sNode* node)
+void EmitIncludes()
+{
+	COD9_GSC* gsc = compiler->gsc;
+	sNode* curInclude;
+	sNode* curInclude2;
+	includeStruct curIncludeStruct;
+
+	compiler->AlignPos(16);
+
+	gsc->includeStructs = compiler->GetRelPos();
+
+	for (std::vector<sNode*>::iterator it = compiler->sourceCode->begin(); it < compiler->sourceCode->end(); it++)
+	{
+		curInclude = *it;
+
+		if (curInclude->nodeType == TYPE_COMPILED_STRING && curInclude->compiledString->type == TYPE_INCLUDE)
+		{
+			// make sure the include isn't duplicated, if it is then throw an error
+			for (std::vector<sNode*>::iterator it2 = compiler->sourceCode->begin(); it2 < compiler->sourceCode->end(); it2++)
+			{
+				curInclude2 = *it2;
+
+				if (curInclude2->nodeType == TYPE_COMPILED_STRING && curInclude2->compiledString->type == TYPE_INCLUDE &&
+					curInclude2 != curInclude && curInclude2->compiledString->offset == curInclude->compiledString->offset)
+					CompileError("CompileError: duplicate include \"%s\"", curInclude->compiledString->stringValue);
+			}
+			// set up the includeStruct and write it to the stream
+			curIncludeStruct.string = curInclude->compiledString->offset;
+			compiler->AddBytes(&curIncludeStruct, sizeof(includeStruct));
+
+			gsc->numOfIncludes++;
+		}
+	}
+}
+
+void EmitFuncDefinitions()
 {
 	COD9_GSC* gsc = compiler->gsc;
 
-	// need to actually compile the fucking strings first to know the offset of it
+	compiler->AlignPos(16);
 
-	gsc->numOfIncludes++;
-}
-
-void EmitUsingAnimTree(sNode* node)
-{
-	COD9_GSC* gsc = compiler->gsc;
-}
-
-void EmitFuncDefinition(sNode* node)
-{
-	COD9_GSC* gsc = compiler->gsc;
-}
-
-void CompileError(char* msg)
-{
-	MessageBoxA(NULL, msg, NULL, MB_OK | MB_ICONERROR);
-	ExitProcess(-1);
+	sNode* curNode;
+	for (std::vector<sNode*>::iterator it = compiler->sourceCode->begin(); it < compiler->sourceCode->end(); it++)
+	{
+		curNode = *it;
+	}
 }
 
 /*
@@ -125,12 +215,14 @@ void CompileError(char* msg)
 	6.	function code -> there're some bytes before/after each function, but its most likely just weird padding
 	7.	funcDefinitions
 	8.	referencedFunctions (gonna rename this)
-	9.	want more data? well no, fuck you
+	9.	usinganimtreeStructs
+	10.	want more data? well no, fuck you
 */
 
-void OnParsingComplete(std::vector<sNode*>* sourceCode)
+void OnParsingComplete()
 {
 	COD9_GSC* gsc = compiler->gsc;
+
 	memcpy(&gsc->identifier, COD9_GSC_IDENTIFIER, sizeof(COD9_GSC_IDENTIFIER));
 
 	// add relative path of compiled gsc
@@ -140,41 +232,34 @@ void OnParsingComplete(std::vector<sNode*>* sourceCode)
 	// for nodes which are strings, sets up compiledString member
 	CompileStrings();
 
-	sNode* curNode;
-	for (std::vector<sNode*>::iterator it = sourceCode->begin(); it < sourceCode->end(); it++)
-	{
-		curNode = *it;
+	EmitIncludes();
 
-		if (curNode->nodeType == TYPE_INCLUDE)
-			EmitInclude(curNode);
-		else if (curNode->nodeType == TYPE_USINGANIMTREE)
-			EmitUsingAnimTree(curNode);
-		else if (curNode->nodeType == TYPE_FUNC_DEFINITION)
-			EmitFuncDefinition(curNode);
-		else
-			CompileError("CompileError: wrong nodeType at file scope");
-	}
+	EmitFuncDefinitions();
 }
 
-void Preyyparse(char* relativePath, FILE* outputFile)
+void Preyyparse(char* relativePath, char* outputDir)
 {
 	lineCount = 1;
 
 	compiler = new sCompiler();
 
+	// fix relative path slashes
 	compiler->relativePath = _strdup(relativePath);
-	for (char* c = compiler->relativePath; c < compiler->relativePath + strlen(compiler->relativePath); c++)
+	for (char* c = compiler->relativePath; *c; c++)
 	{
 		if (*c == '\\')
 			*c = '/';
 	}
-
-	compiler->outputFile = outputFile;
+	
+	// open output file
+	compiler->outputDir = outputDir;
+	fopen_s(&compiler->outputFile, compiler->outputDir, "wb");
 }
 
 void Postyyparse()
 {
 	fwrite(compiler->buf, 1, compiler->GetRelPos(), compiler->outputFile);
+	fclose(compiler->outputFile);
 
 	free(compiler->relativePath);
 	delete compiler;
@@ -197,17 +282,13 @@ int main(int argc, char* argv[])
 	// loop through the raw bo1 folder to parse the game scripts
 	//recursive_yyparse("E:\\Program Files (x86)\\Steam\\steamapps\\common\\call of duty black ops\\raw\\*");
 
-	FILE* outputFile = NULL;
-	fopen_s(&outputFile, "C:\\Users\\Ignacio\\Documents\\GitHub\\bo2_gsc_compiler\\bo2_gsc_lexer\\Release\\script_parse_test_out.gsc", "wb");
-
-	Preyyparse("maps/mp/gametypes/_rank.gsc", outputFile);
+	Preyyparse("maps/mp/gametypes/_rank.gsc", "C:\\Users\\Ignacio\\Documents\\GitHub\\bo2_gsc_compiler\\bo2_gsc_lexer\\Release\\script_parse_test_out.gsc");
 	yyparse();
 	Postyyparse();
 
-	cin.get();
+	//cin.get();
 
 	// close file handles & exit
-	fclose(outputFile);
 	fclose(inputFile);
 	fclose(stderrlog);
 	return 0;

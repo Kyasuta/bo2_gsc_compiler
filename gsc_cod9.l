@@ -13,6 +13,7 @@ P					[a-zA-Z_\\]
 #define fileno _fileno // <stdio.h>
 
 void comment(void);
+void ProcessEscapeSequences(char* stringValue);
 int another_opening_square_bracket(void);
 int next_closing_square_bracket(void);
 void invalid_identifier(void);
@@ -66,28 +67,28 @@ int lineCount = 1;
 
 					/* identifier e.g. var name, function name... */
 {L}({L}|{D})*		{
-						char* i = 0;
+						char* c = 0;
 
 						yylval.stringValue = _strdup(yytext);
 						// convert the letters to lower case
-						for (i = yylval.stringValue; i < yylval.stringValue + strlen(yylval.stringValue); i++)
+						for (c = yylval.stringValue; *c; c++)
 						{
-							*i = tolower(*i);
-						} 
+							*c = tolower(*c);
+						}
 						return(IDENTIFIER);
 					}
 
 					/* gsc file path e.g. maps\mp\_utility */
 {P}({P}|{D})*		{
-						char* i = 0;
+						char* c = 0;
 
 						yylval.stringValue = _strdup(yytext);
 						// convert backward slashes to forward slashes & the letters to lower case
-						for (i = yylval.stringValue; i < yylval.stringValue + strlen(yylval.stringValue); i++)
+						for (c = yylval.stringValue; *c; c++)
 						{
-							if (*i == '\\')
-								*i = '/';
-							*i = tolower(*i);
+							if (*c == '\\')
+								*c = '/';
+							*c = tolower(*c);
 						}
 						return(PATH);
 					}
@@ -112,6 +113,8 @@ int lineCount = 1;
 							yylval.stringValue[strlen(yylval.stringValue) - 1] = '\0';
 							memmove(yylval.stringValue, yylval.stringValue + 1, strlen(yylval.stringValue));
 
+							ProcessEscapeSequences(yylval.stringValue);
+
 							return(STRING_LITERAL);
 						}
 
@@ -122,6 +125,8 @@ int lineCount = 1;
 							// remove last " and skip &"
 							yylval.stringValue[strlen(yylval.stringValue) - 1] = '\0';
 							memmove(yylval.stringValue, yylval.stringValue + 2, strlen(yylval.stringValue));
+
+							ProcessEscapeSequences(yylval.stringValue); // not sure if its needed here
 
 							return(LOC_STRING_LITERAL);
 						}
@@ -213,6 +218,33 @@ void comment(void)
 		prev = c;
 	}
 	yyerror("unterminated comment");
+}
+
+void ProcessEscapeSequences(char* stringValue)
+{
+	for (char* c = stringValue; *c; c++)
+	{
+		if (*c == '\\')
+		{
+			switch (*(c + 1))
+			{
+			case '\\':
+				*c = '\\';
+				break;
+			case 'n':
+				*c = '\n';
+				break;
+			case 't':
+				*c = '\t';
+				break;
+			default:
+				yyerror("unknown escape sequence in string");
+				break;
+			}
+
+			memmove(c + 1, c + 2, strlen(c + 2) + 1);
+		}
+	}
 }
 
 int another_opening_square_bracket(void)

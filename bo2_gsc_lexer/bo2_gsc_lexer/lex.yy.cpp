@@ -608,13 +608,14 @@ char *yytext;
 #define fileno _fileno // <stdio.h>
 
 void comment(void);
+void ProcessEscapeSequences(char* stringValue);
 int another_opening_square_bracket(void);
 int next_closing_square_bracket(void);
 void invalid_identifier(void);
 void unexpected_character(void);
 
 int lineCount = 1;
-#line 618 "lex.yy.cpp"
+#line 619 "lex.yy.cpp"
 
 #define INITIAL 0
 
@@ -796,9 +797,9 @@ YY_DECL
 	register char *yy_cp, *yy_bp;
 	register int yy_act;
     
-#line 24 "..\\..\\gsc_cod9.l"
+#line 25 "..\\..\\gsc_cod9.l"
 
-#line 802 "lex.yy.cpp"
+#line 803 "lex.yy.cpp"
 
 	if ( !(yy_init) )
 		{
@@ -883,27 +884,27 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 25 "..\\..\\gsc_cod9.l"
+#line 26 "..\\..\\gsc_cod9.l"
 { comment(); }
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 26 "..\\..\\gsc_cod9.l"
+#line 27 "..\\..\\gsc_cod9.l"
 { /* consume //-comment */; }
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 28 "..\\..\\gsc_cod9.l"
+#line 29 "..\\..\\gsc_cod9.l"
 { return(INCLUDE); }
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 29 "..\\..\\gsc_cod9.l"
+#line 30 "..\\..\\gsc_cod9.l"
 { return(USING_ANIMTREE); }
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 30 "..\\..\\gsc_cod9.l"
+#line 31 "..\\..\\gsc_cod9.l"
 {
 						yylval.intValue = -1;
 						return(INT_LITERAL);
@@ -911,32 +912,32 @@ YY_RULE_SETUP
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 34 "..\\..\\gsc_cod9.l"
+#line 35 "..\\..\\gsc_cod9.l"
 { return(BREAK); }
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 35 "..\\..\\gsc_cod9.l"
+#line 36 "..\\..\\gsc_cod9.l"
 { return(CASE); }
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 36 "..\\..\\gsc_cod9.l"
+#line 37 "..\\..\\gsc_cod9.l"
 { return(CONTINUE); }
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 37 "..\\..\\gsc_cod9.l"
+#line 38 "..\\..\\gsc_cod9.l"
 { return(DEFAULT); }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 38 "..\\..\\gsc_cod9.l"
+#line 39 "..\\..\\gsc_cod9.l"
 { return(ELSE); }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 39 "..\\..\\gsc_cod9.l"
+#line 40 "..\\..\\gsc_cod9.l"
 {
 						yylval.intValue = 0;
 						return(INT_LITERAL);
@@ -944,42 +945,42 @@ YY_RULE_SETUP
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 43 "..\\..\\gsc_cod9.l"
+#line 44 "..\\..\\gsc_cod9.l"
 { return(FOR); }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 44 "..\\..\\gsc_cod9.l"
+#line 45 "..\\..\\gsc_cod9.l"
 { return(FOREACH); }
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 45 "..\\..\\gsc_cod9.l"
+#line 46 "..\\..\\gsc_cod9.l"
 { return(IF); }
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 46 "..\\..\\gsc_cod9.l"
+#line 47 "..\\..\\gsc_cod9.l"
 { return(IN); }
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 47 "..\\..\\gsc_cod9.l"
+#line 48 "..\\..\\gsc_cod9.l"
 { return(RETURN); }
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 48 "..\\..\\gsc_cod9.l"
+#line 49 "..\\..\\gsc_cod9.l"
 { return(SWITCH); }
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 49 "..\\..\\gsc_cod9.l"
+#line 50 "..\\..\\gsc_cod9.l"
 { return(THREAD); }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 50 "..\\..\\gsc_cod9.l"
+#line 51 "..\\..\\gsc_cod9.l"
 {
 						yylval.intValue = 1;
 						return(INT_LITERAL);
@@ -987,28 +988,28 @@ YY_RULE_SETUP
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 54 "..\\..\\gsc_cod9.l"
+#line 55 "..\\..\\gsc_cod9.l"
 { return(UNDEFINED); }
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 55 "..\\..\\gsc_cod9.l"
+#line 56 "..\\..\\gsc_cod9.l"
 { return(WAIT); }
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 56 "..\\..\\gsc_cod9.l"
+#line 57 "..\\..\\gsc_cod9.l"
 { return(WAITTILLFRAMEEND); }
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 57 "..\\..\\gsc_cod9.l"
+#line 58 "..\\..\\gsc_cod9.l"
 { return(WHILE); }
 	YY_BREAK
 /* invalid identifier e.g 123myVar, we have to throw an error */
 case 24:
 YY_RULE_SETUP
-#line 60 "..\\..\\gsc_cod9.l"
+#line 61 "..\\..\\gsc_cod9.l"
 {
 						invalid_identifier();
 					}
@@ -1018,33 +1019,33 @@ YY_RULE_SETUP
 /* identifier e.g. var name, function name... */
 case 25:
 YY_RULE_SETUP
-#line 68 "..\\..\\gsc_cod9.l"
+#line 69 "..\\..\\gsc_cod9.l"
 {
-						char* i = 0;
+						char* c = 0;
 
 						yylval.stringValue = _strdup(yytext);
 						// convert the letters to lower case
-						for (i = yylval.stringValue; i < yylval.stringValue + strlen(yylval.stringValue); i++)
+						for (c = yylval.stringValue; *c; c++)
 						{
-							*i = tolower(*i);
-						} 
+							*c = tolower(*c);
+						}
 						return(IDENTIFIER);
 					}
 	YY_BREAK
 /* gsc file path e.g. maps\mp\_utility */
 case 26:
 YY_RULE_SETUP
-#line 81 "..\\..\\gsc_cod9.l"
+#line 82 "..\\..\\gsc_cod9.l"
 {
-						char* i = 0;
+						char* c = 0;
 
 						yylval.stringValue = _strdup(yytext);
 						// convert backward slashes to forward slashes & the letters to lower case
-						for (i = yylval.stringValue; i < yylval.stringValue + strlen(yylval.stringValue); i++)
+						for (c = yylval.stringValue; *c; c++)
 						{
-							if (*i == '\\')
-								*i = '/';
-							*i = tolower(*i);
+							if (*c == '\\')
+								*c = '/';
+							*c = tolower(*c);
 						}
 						return(PATH);
 					}
@@ -1052,7 +1053,7 @@ YY_RULE_SETUP
 /* integer e.g. 10 */
 case 27:
 YY_RULE_SETUP
-#line 96 "..\\..\\gsc_cod9.l"
+#line 97 "..\\..\\gsc_cod9.l"
 {
 						sscanf_s(yytext, "%d", &yylval.intValue);
 						return(INT_LITERAL);
@@ -1061,7 +1062,7 @@ YY_RULE_SETUP
 /* float e.g. 1.5 or .5 */
 case 28:
 YY_RULE_SETUP
-#line 102 "..\\..\\gsc_cod9.l"
+#line 103 "..\\..\\gsc_cod9.l"
 {
 						sscanf_s(yytext, "%f", &yylval.floatValue);
 						return(FLOAT_LITERAL);
@@ -1070,7 +1071,7 @@ YY_RULE_SETUP
 /* string e.g. "myString" */
 case 29:
 YY_RULE_SETUP
-#line 108 "..\\..\\gsc_cod9.l"
+#line 109 "..\\..\\gsc_cod9.l"
 {
 							yylval.stringValue = _strdup(yytext);
 
@@ -1078,13 +1079,15 @@ YY_RULE_SETUP
 							yylval.stringValue[strlen(yylval.stringValue) - 1] = '\0';
 							memmove(yylval.stringValue, yylval.stringValue + 1, strlen(yylval.stringValue));
 
+							ProcessEscapeSequences(yylval.stringValue);
+
 							return(STRING_LITERAL);
 						}
 	YY_BREAK
 /* localized string e.g. &"myString" */
 case 30:
 YY_RULE_SETUP
-#line 119 "..\\..\\gsc_cod9.l"
+#line 122 "..\\..\\gsc_cod9.l"
 {
 							yylval.stringValue = _strdup(yytext);
 
@@ -1092,13 +1095,15 @@ YY_RULE_SETUP
 							yylval.stringValue[strlen(yylval.stringValue) - 1] = '\0';
 							memmove(yylval.stringValue, yylval.stringValue + 2, strlen(yylval.stringValue));
 
+							ProcessEscapeSequences(yylval.stringValue); // not sure if its needed here
+
 							return(LOC_STRING_LITERAL);
 						}
 	YY_BREAK
 /* hashed string e.g. #"myString" */
 case 31:
 YY_RULE_SETUP
-#line 130 "..\\..\\gsc_cod9.l"
+#line 135 "..\\..\\gsc_cod9.l"
 {
 							yylval.stringValue = _strdup(yytext);
 
@@ -1111,261 +1116,261 @@ YY_RULE_SETUP
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 140 "..\\..\\gsc_cod9.l"
+#line 145 "..\\..\\gsc_cod9.l"
 { return(SHIFT_RIGHT_ASSIGN); }
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
-#line 141 "..\\..\\gsc_cod9.l"
+#line 146 "..\\..\\gsc_cod9.l"
 { return(SHIFT_LEFT_ASSIGN); }
 	YY_BREAK
 case 34:
 YY_RULE_SETUP
-#line 142 "..\\..\\gsc_cod9.l"
+#line 147 "..\\..\\gsc_cod9.l"
 { return(PLUS_ASSIGN); }
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
-#line 143 "..\\..\\gsc_cod9.l"
+#line 148 "..\\..\\gsc_cod9.l"
 { return(MINUS_ASSIGN); }
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
-#line 144 "..\\..\\gsc_cod9.l"
+#line 149 "..\\..\\gsc_cod9.l"
 { return(MULTIPLY_ASSIGN); }
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
-#line 145 "..\\..\\gsc_cod9.l"
+#line 150 "..\\..\\gsc_cod9.l"
 { return(DIVIDE_ASSIGN); }
 	YY_BREAK
 case 38:
 YY_RULE_SETUP
-#line 146 "..\\..\\gsc_cod9.l"
+#line 151 "..\\..\\gsc_cod9.l"
 { return(MOD_ASSIGN); }
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
-#line 147 "..\\..\\gsc_cod9.l"
+#line 152 "..\\..\\gsc_cod9.l"
 { return(BIT_AND_ASSIGN); }
 	YY_BREAK
 case 40:
 YY_RULE_SETUP
-#line 148 "..\\..\\gsc_cod9.l"
+#line 153 "..\\..\\gsc_cod9.l"
 { return(BIT_EX_OR_ASSIGN); }
 	YY_BREAK
 case 41:
 YY_RULE_SETUP
-#line 149 "..\\..\\gsc_cod9.l"
+#line 154 "..\\..\\gsc_cod9.l"
 { return(BIT_OR_ASSIGN); }
 	YY_BREAK
 case 42:
 YY_RULE_SETUP
-#line 150 "..\\..\\gsc_cod9.l"
+#line 155 "..\\..\\gsc_cod9.l"
 { return(SHIFT_RIGHT_OP); }
 	YY_BREAK
 case 43:
 YY_RULE_SETUP
-#line 151 "..\\..\\gsc_cod9.l"
+#line 156 "..\\..\\gsc_cod9.l"
 { return(SHIFT_LEFT_OP); }
 	YY_BREAK
 case 44:
 YY_RULE_SETUP
-#line 152 "..\\..\\gsc_cod9.l"
+#line 157 "..\\..\\gsc_cod9.l"
 { return(INC_OP); }
 	YY_BREAK
 case 45:
 YY_RULE_SETUP
-#line 153 "..\\..\\gsc_cod9.l"
+#line 158 "..\\..\\gsc_cod9.l"
 { return(DEC_OP); }
 	YY_BREAK
 case 46:
 YY_RULE_SETUP
-#line 154 "..\\..\\gsc_cod9.l"
+#line 159 "..\\..\\gsc_cod9.l"
 { return(LOGICAL_AND_OP); }
 	YY_BREAK
 case 47:
 YY_RULE_SETUP
-#line 155 "..\\..\\gsc_cod9.l"
+#line 160 "..\\..\\gsc_cod9.l"
 { return(LOGICAL_OR_OP); }
 	YY_BREAK
 case 48:
 YY_RULE_SETUP
-#line 156 "..\\..\\gsc_cod9.l"
+#line 161 "..\\..\\gsc_cod9.l"
 { return(LESS_EQUAL_OP); }
 	YY_BREAK
 case 49:
 YY_RULE_SETUP
-#line 157 "..\\..\\gsc_cod9.l"
+#line 162 "..\\..\\gsc_cod9.l"
 { return(GREATER_EQUAL_OP); }
 	YY_BREAK
 case 50:
 YY_RULE_SETUP
-#line 158 "..\\..\\gsc_cod9.l"
+#line 163 "..\\..\\gsc_cod9.l"
 { return(EQUALITY_OP); }
 	YY_BREAK
 case 51:
 YY_RULE_SETUP
-#line 159 "..\\..\\gsc_cod9.l"
+#line 164 "..\\..\\gsc_cod9.l"
 { return(INEQUALITY_OP); }
 	YY_BREAK
 case 52:
 YY_RULE_SETUP
-#line 160 "..\\..\\gsc_cod9.l"
+#line 165 "..\\..\\gsc_cod9.l"
 { return(REFERENCE_FUNC); }
 	YY_BREAK
 case 53:
 YY_RULE_SETUP
-#line 161 "..\\..\\gsc_cod9.l"
+#line 166 "..\\..\\gsc_cod9.l"
 { return(DEVBLOCK_START); }
 	YY_BREAK
 case 54:
 YY_RULE_SETUP
-#line 162 "..\\..\\gsc_cod9.l"
+#line 167 "..\\..\\gsc_cod9.l"
 { return(DEVBLOCK_END); }
 	YY_BREAK
 case 55:
 YY_RULE_SETUP
-#line 163 "..\\..\\gsc_cod9.l"
+#line 168 "..\\..\\gsc_cod9.l"
 { return(';'); }
 	YY_BREAK
 case 56:
 YY_RULE_SETUP
-#line 164 "..\\..\\gsc_cod9.l"
+#line 169 "..\\..\\gsc_cod9.l"
 { return('{'); }
 	YY_BREAK
 case 57:
 YY_RULE_SETUP
-#line 165 "..\\..\\gsc_cod9.l"
+#line 170 "..\\..\\gsc_cod9.l"
 { return('}'); }
 	YY_BREAK
 case 58:
 YY_RULE_SETUP
-#line 166 "..\\..\\gsc_cod9.l"
+#line 171 "..\\..\\gsc_cod9.l"
 { return(','); }
 	YY_BREAK
 case 59:
 YY_RULE_SETUP
-#line 167 "..\\..\\gsc_cod9.l"
+#line 172 "..\\..\\gsc_cod9.l"
 { return(':'); }
 	YY_BREAK
 case 60:
 YY_RULE_SETUP
-#line 168 "..\\..\\gsc_cod9.l"
+#line 173 "..\\..\\gsc_cod9.l"
 { return('='); }
 	YY_BREAK
 case 61:
 YY_RULE_SETUP
-#line 169 "..\\..\\gsc_cod9.l"
+#line 174 "..\\..\\gsc_cod9.l"
 { return('('); }
 	YY_BREAK
 case 62:
 YY_RULE_SETUP
-#line 170 "..\\..\\gsc_cod9.l"
+#line 175 "..\\..\\gsc_cod9.l"
 { return(')'); }
 	YY_BREAK
 case 63:
 YY_RULE_SETUP
-#line 171 "..\\..\\gsc_cod9.l"
+#line 176 "..\\..\\gsc_cod9.l"
 { return(another_opening_square_bracket()?DEREFERENCE_FUNC_START:(next_closing_square_bracket()?EMPTY_ARRAY:'[')); }
 	YY_BREAK
 case 64:
 YY_RULE_SETUP
-#line 172 "..\\..\\gsc_cod9.l"
+#line 177 "..\\..\\gsc_cod9.l"
 { return(']'); }
 	YY_BREAK
 case 65:
 YY_RULE_SETUP
-#line 173 "..\\..\\gsc_cod9.l"
+#line 178 "..\\..\\gsc_cod9.l"
 { return('.'); }
 	YY_BREAK
 case 66:
 YY_RULE_SETUP
-#line 174 "..\\..\\gsc_cod9.l"
+#line 179 "..\\..\\gsc_cod9.l"
 { return('&'); }
 	YY_BREAK
 case 67:
 YY_RULE_SETUP
-#line 175 "..\\..\\gsc_cod9.l"
+#line 180 "..\\..\\gsc_cod9.l"
 { return('!'); }
 	YY_BREAK
 case 68:
 YY_RULE_SETUP
-#line 176 "..\\..\\gsc_cod9.l"
+#line 181 "..\\..\\gsc_cod9.l"
 { return('~'); }
 	YY_BREAK
 case 69:
 YY_RULE_SETUP
-#line 177 "..\\..\\gsc_cod9.l"
+#line 182 "..\\..\\gsc_cod9.l"
 { return('-'); }
 	YY_BREAK
 case 70:
 YY_RULE_SETUP
-#line 178 "..\\..\\gsc_cod9.l"
+#line 183 "..\\..\\gsc_cod9.l"
 { return('+'); }
 	YY_BREAK
 case 71:
 YY_RULE_SETUP
-#line 179 "..\\..\\gsc_cod9.l"
+#line 184 "..\\..\\gsc_cod9.l"
 { return('*'); }
 	YY_BREAK
 case 72:
 YY_RULE_SETUP
-#line 180 "..\\..\\gsc_cod9.l"
+#line 185 "..\\..\\gsc_cod9.l"
 { return('/'); }
 	YY_BREAK
 case 73:
 YY_RULE_SETUP
-#line 181 "..\\..\\gsc_cod9.l"
+#line 186 "..\\..\\gsc_cod9.l"
 { return('%'); }
 	YY_BREAK
 case 74:
 YY_RULE_SETUP
-#line 182 "..\\..\\gsc_cod9.l"
+#line 187 "..\\..\\gsc_cod9.l"
 { return('<'); }
 	YY_BREAK
 case 75:
 YY_RULE_SETUP
-#line 183 "..\\..\\gsc_cod9.l"
+#line 188 "..\\..\\gsc_cod9.l"
 { return('>'); }
 	YY_BREAK
 case 76:
 YY_RULE_SETUP
-#line 184 "..\\..\\gsc_cod9.l"
+#line 189 "..\\..\\gsc_cod9.l"
 { return('^'); }
 	YY_BREAK
 case 77:
 YY_RULE_SETUP
-#line 185 "..\\..\\gsc_cod9.l"
+#line 190 "..\\..\\gsc_cod9.l"
 { return('|'); }
 	YY_BREAK
 case 78:
 YY_RULE_SETUP
-#line 186 "..\\..\\gsc_cod9.l"
+#line 191 "..\\..\\gsc_cod9.l"
 { return('?'); }
 	YY_BREAK
 case 79:
 YY_RULE_SETUP
-#line 188 "..\\..\\gsc_cod9.l"
+#line 193 "..\\..\\gsc_cod9.l"
 { ; }
 	YY_BREAK
 case 80:
 /* rule 80 can match eol */
 YY_RULE_SETUP
-#line 189 "..\\..\\gsc_cod9.l"
+#line 194 "..\\..\\gsc_cod9.l"
 { lineCount++; }
 	YY_BREAK
 case 81:
 YY_RULE_SETUP
-#line 190 "..\\..\\gsc_cod9.l"
+#line 195 "..\\..\\gsc_cod9.l"
 { unexpected_character(); }
 	YY_BREAK
 case 82:
 YY_RULE_SETUP
-#line 192 "..\\..\\gsc_cod9.l"
+#line 197 "..\\..\\gsc_cod9.l"
 ECHO;
 	YY_BREAK
-#line 1369 "lex.yy.cpp"
+#line 1374 "lex.yy.cpp"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -2359,7 +2364,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 192 "..\\..\\gsc_cod9.l"
+#line 197 "..\\..\\gsc_cod9.l"
 
 
 
@@ -2385,6 +2390,33 @@ void comment(void)
 		prev = c;
 	}
 	yyerror("unterminated comment");
+}
+
+void ProcessEscapeSequences(char* stringValue)
+{
+	for (char* c = stringValue; *c; c++)
+	{
+		if (*c == '\\')
+		{
+			switch (*(c + 1))
+			{
+			case '\\':
+				*c = '\\';
+				break;
+			case 'n':
+				*c = '\n';
+				break;
+			case 't':
+				*c = '\t';
+				break;
+			default:
+				yyerror("unknown escape sequence in string");
+				break;
+			}
+
+			memmove(c + 1, c + 2, strlen(c + 2) + 1);
+		}
+	}
 }
 
 int another_opening_square_bracket(void)

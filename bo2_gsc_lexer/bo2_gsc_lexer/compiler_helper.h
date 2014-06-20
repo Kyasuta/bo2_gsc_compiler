@@ -15,13 +15,15 @@ public:
 	COD9_GSC* gsc;
 
 	char* relativePath;
+	char* outputDir;
 	FILE* outputFile;
 
 	BYTE buf[0x100000]; // 1mb
 	BYTE* bufPos;
 
-	std::vector<sNode*> nodes;		// every node in the source code !!! not sure if needed !!!
-	std::vector<sNode*> strings;	// every identifier and string in the source code, except hashed ones, includes and animtrees !!! exlude func names for gscStrings too? !!!
+	std::vector<sNode*>* sourceCode;	// main node
+	std::vector<sNode*> nodes;			// every node in the source code !!! not sure if needed !!!
+	std::vector<sNode*> strings;		// every identifier and string in the source code
 
 	DWORD GetRelPos()
 	{
@@ -34,14 +36,9 @@ public:
 		bufPos += amount;
 	}
 
-	void AlignWord()
+	void AlignPos(int mod)
 	{
-		bufPos = (BYTE*)(((uintptr_t)bufPos + 2 - 1) & ~(2 - 1));
-	}
-
-	void AlignDword()
-	{
-		bufPos = (BYTE*)(((uintptr_t)bufPos + 4 - 1) & ~(4 - 1));
+		bufPos = buf + ((bufPos - buf + mod - 1) & ~(mod - 1));
 	}
 
 	sCompiler()
@@ -179,6 +176,7 @@ enum ENodeType
 	TYPE_STRING,
 	TYPE_LOC_STRING,
 	TYPE_HASH_STRING, // this one is intValue, not stringValue
+	TYPE_COMPILED_STRING, // ALL string nodes are converted to this type in CompileStrings()
 	TYPE_INCLUDE,
 	TYPE_USINGANIMTREE,
 
@@ -196,7 +194,10 @@ enum ENodeType
 
 struct sCompiledString
 {
-	unsigned __int32 stringOffset;
+	ENodeType type;			// type of the string
+	char* stringValue;		// pointer to the string itself !!! may be not needed !!!
+	DWORD offset;			// offset in the compiled gsc file
+	// will need to add the reference count here
 };
 
 struct sFuncDefinition

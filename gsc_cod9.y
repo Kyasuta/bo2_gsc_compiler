@@ -6,9 +6,10 @@
 extern int lineCount;
 int yylex(void);
 
+void CompileError(char* errorString, ...);
 void yyerror(char const *s);
 
-void OnParsingComplete(std::vector<sNode*>* sourceCode);
+void OnParsingComplete();
 %}
 
 %union {
@@ -65,7 +66,7 @@ void OnParsingComplete(std::vector<sNode*>* sourceCode);
 
 translation_unit
 	: /* empty */
-	| source_code												{ OnParsingComplete($1); }
+	| source_code												{ compiler->sourceCode = $1; OnParsingComplete(); }
 	;
 
 source_code
@@ -327,6 +328,5 @@ for_loop_expression
 
 void yyerror(char const *s)
 {
-	printf("error: %s\nat line %d\n", s, lineCount);
-	system("pause");
+	CompileError("yyerror: %s\nat line %d\n", s, lineCount);
 }
