@@ -1,10 +1,12 @@
 #include "stdafx.h"
 
+/* compiler struct */
+
+sCompiler* compiler;
+
 /* nodes */
 sNode* AllocNode(ENodeType nodeType)
 {
-	//printf("allocating node %d\n", nodeType);
-
 	sNode* allocatedNode = (sNode*)malloc(sizeof(sNode));
 	assert(allocatedNode != NULL);
 
@@ -50,6 +52,8 @@ sNode* AllocNode(ENodeType nodeType)
 
 	allocatedNode->nodeType = nodeType;
 
+	compiler->nodes.push_back(allocatedNode);
+
 	return allocatedNode;
 }
 
@@ -58,6 +62,8 @@ sNode* IdentifierNode(char* identifierVal)
 	sNode* allocatedNode = AllocNode(TYPE_IDENTIFIER);
 	allocatedNode->stringValue = identifierVal;
 
+	compiler->strings.push_back(allocatedNode);
+
 	return allocatedNode;
 }
 
@@ -65,6 +71,8 @@ sNode* PathNode(char* pathVal)
 {
 	sNode* allocatedNode = AllocNode(TYPE_PATH);
 	allocatedNode->stringValue = pathVal;
+
+	compiler->strings.push_back(allocatedNode);
 
 	return allocatedNode;
 }
@@ -90,6 +98,8 @@ sNode* StringNode(char* stringVal)
 	sNode* allocatedNode = AllocNode(TYPE_STRING);
 	allocatedNode->stringValue = stringVal;
 
+	compiler->strings.push_back(allocatedNode);
+
 	return allocatedNode;
 }
 
@@ -98,13 +108,27 @@ sNode* LocStringNode(char* locStringVal)
 	sNode* allocatedNode = AllocNode(TYPE_LOC_STRING);
 	allocatedNode->stringValue = locStringVal;
 
+	compiler->strings.push_back(allocatedNode);
+
 	return allocatedNode;
+}
+
+// DJB2 algorithm
+DWORD generateHashValue(char* str)
+{
+	DWORD result = 5381;
+	int c;
+	
+	while (c = *str++)
+		result = ((result << 5) + result) + c; /* hash * 33 + c */
+	
+	return result;
 }
 
 sNode* HashStringNode(char* hashStringVal)
 {
 	sNode* allocatedNode = AllocNode(TYPE_HASH_STRING);
-	allocatedNode->stringValue = hashStringVal;
+	allocatedNode->intValue = generateHashValue(hashStringVal);
 
 	return allocatedNode;
 }

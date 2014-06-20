@@ -33,6 +33,9 @@
     <ClInclude Include="y.tab.h">
       <Filter>lex_yacc</Filter>
     </ClInclude>
+    <ClInclude Include="bo2_gsc_file.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">

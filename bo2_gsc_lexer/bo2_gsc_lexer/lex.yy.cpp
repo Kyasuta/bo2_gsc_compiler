@@ -1075,7 +1075,7 @@ YY_RULE_SETUP
 							yylval.stringValue = _strdup(yytext);
 
 							// remove last " and skip "
-							yylval.stringValue[strlen(yylval.stringValue)] = '\0';
+							yylval.stringValue[strlen(yylval.stringValue) - 1] = '\0';
 							memmove(yylval.stringValue, yylval.stringValue + 1, strlen(yylval.stringValue));
 
 							return(STRING_LITERAL);
@@ -1089,7 +1089,7 @@ YY_RULE_SETUP
 							yylval.stringValue = _strdup(yytext);
 
 							// remove last " and skip &"
-							yylval.stringValue[strlen(yylval.stringValue)] = '\0';
+							yylval.stringValue[strlen(yylval.stringValue) - 1] = '\0';
 							memmove(yylval.stringValue, yylval.stringValue + 2, strlen(yylval.stringValue));
 
 							return(LOC_STRING_LITERAL);

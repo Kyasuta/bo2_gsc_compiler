@@ -2,6 +2,7 @@
 //
 
 #include "stdafx.h"
+#include "bo2_gsc_file.h"
 
 using namespace std;
 
@@ -76,37 +77,107 @@ void recursive_yyparse(char* dir)
 	}
 }
 
-// loop all nodes, check for all strings if its same as another string
-// create sCompilerString* and change node type
+// NOT ALL STRINGS
 void CompileStrings()
 {
+	sNode* curString;
+	for (std::vector<sNode*>::iterator it = compiler->strings.begin(); it < compiler->strings.end(); it++)
+	{
+		curString = *it;
 
+		compiler->AddBytes(curString->stringValue, strlen(curString->stringValue) + 1);
+	}
 }
+
+void EmitInclude(sNode* node)
+{
+	COD9_GSC* gsc = compiler->gsc;
+
+	// need to actually compile the fucking strings first to know the offset of it
+
+	gsc->numOfIncludes++;
+}
+
+void EmitUsingAnimTree(sNode* node)
+{
+	COD9_GSC* gsc = compiler->gsc;
+}
+
+void EmitFuncDefinition(sNode* node)
+{
+	COD9_GSC* gsc = compiler->gsc;
+}
+
+void CompileError(char* msg)
+{
+	MessageBoxA(NULL, msg, NULL, MB_OK | MB_ICONERROR);
+	ExitProcess(-1);
+}
+
+/*
+	IMPORTANT, COMPILED GSC DATA ORDER:
+
+	1.	header
+	2.	gsc name
+	3.	string table
+	4.	includeStructs
+	5.	unknown code section start bullshit, most likely padding
+	6.	function code -> there're some bytes before/after each function, but its most likely just weird padding
+	7.	funcDefinitions
+	8.	referencedFunctions (gonna rename this)
+	9.	want more data? well no, fuck you
+*/
 
 void OnParsingComplete(std::vector<sNode*>* sourceCode)
 {
+	COD9_GSC* gsc = compiler->gsc;
+	memcpy(&gsc->identifier, COD9_GSC_IDENTIFIER, sizeof(COD9_GSC_IDENTIFIER));
+
+	// add relative path of compiled gsc
+	gsc->name = (WORD)compiler->GetRelPos();
+	compiler->AddBytes(compiler->relativePath, strlen(compiler->relativePath) + 1);
+
+	// for nodes which are strings, sets up compiledString member
+	CompileStrings();
+
 	sNode* curNode;
 	for (std::vector<sNode*>::iterator it = sourceCode->begin(); it < sourceCode->end(); it++)
 	{
 		curNode = *it;
 
-		if (curNode->nodeType == TYPE_FUNC_DEFINITION)
-		{
-			printf("%s\n", curNode->funcDefinition->funcName->stringValue);
+		if (curNode->nodeType == TYPE_INCLUDE)
+			EmitInclude(curNode);
+		else if (curNode->nodeType == TYPE_USINGANIMTREE)
+			EmitUsingAnimTree(curNode);
+		else if (curNode->nodeType == TYPE_FUNC_DEFINITION)
+			EmitFuncDefinition(curNode);
+		else
+			CompileError("CompileError: wrong nodeType at file scope");
+	}
+}
 
-			if (curNode->funcDefinition->compoundStatement->statement->nodeList)
-			{
-				for (std::vector<sNode*>::iterator it2 = curNode->funcDefinition->compoundStatement->statement->nodeList->begin();
-					it2 < curNode->funcDefinition->compoundStatement->statement->nodeList->end(); it2++)
-				{
-					if ((*it2)->nodeType == TYPE_STATEMENT && (*it2)->statement->type == TYPE_EXPRESSION_STATEMENT && (*it2)->statement->nodeList->at(0)->nodeType == TYPE_FUNC_CALL)
-						printf("%s\n", (*it2)->statement->nodeList->at(0)->funcCall->funcName->stringValue);
-				}
-			}
-		}
+void Preyyparse(char* relativePath, FILE* outputFile)
+{
+	lineCount = 1;
+
+	compiler = new sCompiler();
+
+	compiler->relativePath = _strdup(relativePath);
+	for (char* c = compiler->relativePath; c < compiler->relativePath + strlen(compiler->relativePath); c++)
+	{
+		if (*c == '\\')
+			*c = '/';
 	}
 
-	printf("\n");
+	compiler->outputFile = outputFile;
+}
+
+void Postyyparse()
+{
+	fwrite(compiler->buf, 1, compiler->GetRelPos(), compiler->outputFile);
+
+	free(compiler->relativePath);
+	delete compiler;
 }
 
 int main(int argc, char* argv[])
@@ -125,11 +196,18 @@ int main(int argc, char* argv[])
 	// parse the game script
 	// loop through the raw bo1 folder to parse the game scripts
 	//recursive_yyparse("E:\\Program Files (x86)\\Steam\\steamapps\\common\\call of duty black ops\\raw\\*");
-	lineCount = 1;
+
+	FILE* outputFile = NULL;
+	fopen_s(&outputFile, "C:\\Users\\Ignacio\\Documents\\GitHub\\bo2_gsc_compiler\\bo2_gsc_lexer\\Release\\script_parse_test_out.gsc", "wb");
+
+	Preyyparse("maps/mp/gametypes/_rank.gsc", outputFile);
 	yyparse();
+	Postyyparse();
+
 	cin.get();
 
-	// close both file handles & exit
+	// close file handles & exit
+	fclose(outputFile);
 	fclose(inputFile);
 	fclose(stderrlog);
 	return 0;

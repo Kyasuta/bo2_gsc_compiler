@@ -2,9 +2,57 @@
 
 #include <cassert>
 #include <cstdarg>
+#include "bo2_gsc_file.h"
 
 struct sNode;
 struct sStatement;
+
+/* compiler struct */
+
+class sCompiler
+{
+public:
+	COD9_GSC* gsc;
+
+	char* relativePath;
+	FILE* outputFile;
+
+	BYTE buf[0x100000]; // 1mb
+	BYTE* bufPos;
+
+	std::vector<sNode*> nodes;		// every node in the source code !!! not sure if needed !!!
+	std::vector<sNode*> strings;	// every identifier and string in the source code, except hashed ones, includes and animtrees !!! exlude func names for gscStrings too? !!!
+
+	DWORD GetRelPos()
+	{
+		return bufPos - buf;
+	}
+
+	void AddBytes(void* bytes, DWORD amount)
+	{
+		memcpy(bufPos, bytes, amount);
+		bufPos += amount;
+	}
+
+	void AlignWord()
+	{
+		bufPos = (BYTE*)(((uintptr_t)bufPos + 2 - 1) & ~(2 - 1));
+	}
+
+	void AlignDword()
+	{
+		bufPos = (BYTE*)(((uintptr_t)bufPos + 4 - 1) & ~(4 - 1));
+	}
+
+	sCompiler()
+	{
+		gsc = (COD9_GSC*)buf;
+		memset(gsc, 0, sizeof(COD9_GSC));
+		bufPos = buf + sizeof(COD9_GSC);
+	}
+};
+
+extern sCompiler* compiler;
 
 enum EStatementType
 {
@@ -130,8 +178,7 @@ enum ENodeType
 	TYPE_FLOAT,
 	TYPE_STRING,
 	TYPE_LOC_STRING,
-	TYPE_HASH_STRING,
-	TYPE_COMPILED_STRING, // all identifiers and strings are converted to this type after CompileStrings is called
+	TYPE_HASH_STRING, // this one is intValue, not stringValue
 	TYPE_INCLUDE,
 	TYPE_USINGANIMTREE,
 
