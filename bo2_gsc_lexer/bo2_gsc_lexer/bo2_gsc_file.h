@@ -173,8 +173,8 @@ typedef struct _COD9_GSC
 	WORD numOfFuncDefinitions;	// 0x34 - Number of functions in this script file
 	WORD numOfRefFunctions;		// 0x36 - Number of functions referenced inside the function definitions
 	WORD numOfRelocations;		// 0x38 - Number of patches in the GSC code/file
-	BYTE unknown4[2];			// 0x3A - ?
+	BYTE _padding1[2];			// 0x3A - Struct padding
 	BYTE numOfIncludes;			// 0x3C - Number of included source files
 	BYTE numOfUsinganimtree;	// 0x3D - Number of included animation trees
-	BYTE _padding[2];			// 0x3E - Struct padding
+	BYTE _padding2[2];			// 0x3E - Struct padding
 } COD9_GSC; // size: 64 bytes

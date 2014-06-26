@@ -16,13 +16,9 @@ sNode* AllocNode(ENodeType nodeType)
 		allocatedNode->funcDefinition = (sFuncDefinition*)malloc(sizeof(sFuncDefinition));
 		assert(allocatedNode->funcDefinition != NULL);
 		break;
-	case TYPE_INC_DEC_EXPRESSION:
-		allocatedNode->incDecExpression = (sIncDecExpression*)malloc(sizeof(sIncDecExpression));
-		assert(allocatedNode->incDecExpression != NULL);
-		break;
-	case TYPE_FUNC_CALL:
-		allocatedNode->funcCall = (sFuncCall*)malloc(sizeof(sFuncCall));
-		assert(allocatedNode->funcCall != NULL);
+	case TYPE_FUNC_CALL_EXPRESSION:
+		allocatedNode->funcCallExpression = (sFuncCallExpression*)malloc(sizeof(sFuncCallExpression));
+		assert(allocatedNode->funcCallExpression != NULL);
 		break;
 	case TYPE_ARRAY_SUBSCRIPTING_EXPRESSION:
 		allocatedNode->arraySubscriptingExpression = (sArraySubscriptingExpression*)malloc(sizeof(sArraySubscriptingExpression));
@@ -39,10 +35,6 @@ sNode* AllocNode(ENodeType nodeType)
 	case TYPE_EXPRESSION:
 		allocatedNode->expression = (sExpression*)malloc(sizeof(sExpression));
 		assert(allocatedNode->expression != NULL);
-		break;
-	case TYPE_ASSIGNMENT_EXPRESSION:
-		allocatedNode->assignmentExpression = (sAssignmentExpression*)malloc(sizeof(sAssignmentExpression));
-		assert(allocatedNode->assignmentExpression != NULL);
 		break;
 	case TYPE_STATEMENT:
 		allocatedNode->statement = (sStatement*)malloc(sizeof(sStatement));
@@ -133,37 +125,6 @@ sNode* HashStringNode(char* hashStringVal)
 	return allocatedNode;
 }
 
-/*sNode* PathToNode(char* path)
-{
-	sNode* allocatedNode = AllocNode(TYPE_PATH);
-	allocatedNode->path = path;
-
-	return allocatedNode;
-}
-
-template <typename T>
-sNode* LiteralToNode(ENodeType literalType, T literalValue)
-{
-	sNode* allocatedNode = AllocNode(literalType);
-
-	switch (lteralType)
-	{
-	case TYPE_INT_LITERAL:
-		allocatedNode->intLiteral = literalValue;
-		break;
-	case TYPE_FLOAT_LITERAL:
-		allocatedNode->floatLiteral = literalValue;
-		break;
-	case TYPE_STRING_LITERAL:
-	case TYPE_LOC_STRING_LITERAL:
-	case TYPE_HASH_STRING_LITERAL:
-		allocatedNode->stringLiteral = literalValue;
-		break;
-	}
-
-	return allocatedNode;
-}*/
-
 /* node allocation */
 
 sNode* AllocInclude(char* filedir)
@@ -197,28 +158,18 @@ sNode* AllocFuncDefinition(sNode* funcName, std::vector<sNode*>* parameterList, 
 	return result;
 }
 
-sNode* AllocIncDecExpression(sNode* expression, int isDec)
+sNode* AllocFuncCallExpression(sNode* funcName, sNode* gscOfFunc, std::vector<sNode*>* argumentList, int isPtr, sNode* ptrExpression, int isMethod, sNode* methodObject, int isThread)
 {
-	sNode* result = AllocNode(TYPE_INC_DEC_EXPRESSION);
+	sNode* result = AllocNode(TYPE_FUNC_CALL_EXPRESSION);
 
-	result->incDecExpression->expression = expression;
-	result->incDecExpression->isDec = isDec;
-
-	return result;
-}
-
-sNode* AllocFuncCall(sNode* funcName, sNode* gscOfFunc, std::vector<sNode*>* argumentList, int isPtr, sNode* ptrExpression, int isMethod, sNode* methodObject, int isThread)
-{
-	sNode* result = AllocNode(TYPE_FUNC_CALL);
-
-	result->funcCall->funcName = funcName;
-	result->funcCall->gscOfFunc = gscOfFunc;
-	result->funcCall->argumentList = argumentList;
-	result->funcCall->isPtr = isPtr;
-	result->funcCall->ptrExpression = ptrExpression;
-	result->funcCall->isMethod = isMethod;
-	result->funcCall->methodObject = methodObject;
-	result->funcCall->isThread = isThread;
+	result->funcCallExpression->funcName = funcName;
+	result->funcCallExpression->gscOfFunc = gscOfFunc;
+	result->funcCallExpression->argumentList = argumentList;
+	result->funcCallExpression->isPtr = isPtr;
+	result->funcCallExpression->ptrExpression = ptrExpression;
+	result->funcCallExpression->isMethod = isMethod;
+	result->funcCallExpression->methodObject = methodObject;
+	result->funcCallExpression->isThread = isThread;
 
 	return result;
 }
@@ -233,11 +184,12 @@ sNode* AllocArraySubscriptingExpression(sNode* arrayName, sNode* index)
 	return result;
 }
 
-sNode* AllocElementSelectionExpression(sNode* selection, sNode* selectedElement)
+sNode* AllocElementSelectionExpression(int isSize, sNode* selection, sNode* selectedElement)
 {
 	sNode* result = AllocNode(TYPE_ELEMENT_SELECTION_EXPRESSION);
 
-	result->elementSelectionExpression->selection = selection;
+	result->elementSelectionExpression->isSize = isSize;
+	result->elementSelectionExpression->object = selection;
 	result->elementSelectionExpression->selectedElement = selectedElement;
 
 	return result;
@@ -272,9 +224,7 @@ sNode* AllocExpression(EExpressionType type, ...)
 	case TYPE_EXPR_LOC_STRING:
 	case TYPE_EXPR_HASH_STRING:
 	case TYPE_EXPR_INT:
-	case TYPE_EXPR_UMINUS_INT_OP:
 	case TYPE_EXPR_FLOAT:
-	case TYPE_EXPR_UMINUS_FLOAT_OP:
 	case TYPE_EXPR_FUNC_CALL_NOTHRD:
 	case TYPE_EXPR_ARRAY_SUBSCRIPTING:
 	case TYPE_EXPR_ELEMENT_SELECTION:
@@ -305,6 +255,7 @@ sNode* AllocExpression(EExpressionType type, ...)
 		result->expression->nodeList->push_back(va_arg(vl, sNode*));
 		break;
 	case TYPE_EXPR_VECTOR:
+	case TYPE_EXPR_TERNARY_OP:
 		result->expression->nodeList->push_back(va_arg(vl, sNode*));
 		result->expression->nodeList->push_back(va_arg(vl, sNode*));
 		result->expression->nodeList->push_back(va_arg(vl, sNode*));
@@ -318,16 +269,6 @@ sNode* AllocExpression(EExpressionType type, ...)
 	return result;
 }
 
-sNode* AllocAssignmentExpression(EAssignmentType type, sNode* lvalue, sNode* rvalue)
-{
-	sNode* result = AllocNode(TYPE_ASSIGNMENT_EXPRESSION);
-
-	result->assignmentExpression->lvalue = lvalue;
-	result->assignmentExpression->rvalue = rvalue;
-
-	return result;
-}
-
 sNode* AllocStatement(EStatementType type, ...)
 {
 	va_list vl;
@@ -335,7 +276,7 @@ sNode* AllocStatement(EStatementType type, ...)
 
 	sNode* result = AllocNode(TYPE_STATEMENT);
 	
-	if (type == TYPE_COMPOUND_STATEMENT)
+	if (type == TYPE_STMT_COMPOUND)
 		result->statement->nodeList = va_arg(vl, std::vector<sNode*>*);
 	else
 	{
@@ -343,30 +284,43 @@ sNode* AllocStatement(EStatementType type, ...)
 
 		switch (type)
 		{
-		case TYPE_DEFAULT_STATEMENT:
-		case TYPE_CONTINUE_STATEMENT:
-		case TYPE_BREAK_STATEMENT:
-		case TYPE_WAITTILLFRAMEEND_STATEMENT:
+		case TYPE_STMT_DEFAULT:
+		case TYPE_STMT_CONTINUE:
+		case TYPE_STMT_BREAK:
+		case TYPE_STMT_WAITTILLFRAMEEND:
 			break;
-		case TYPE_CASE_STATEMENT:
-		case TYPE_RETURN_STATEMENT:
-		case TYPE_WAIT_EXPR_STATEMENT:
-		case TYPE_EXPRESSION_STATEMENT:
-			result->statement->nodeList->push_back(va_arg(vl, sNode*));
-			break;
-		case TYPE_IF_STATEMENT:
-		case TYPE_SWITCH_STATEMENT:
-		case TYPE_WHILE_STATEMENT:
-			result->statement->nodeList->push_back(va_arg(vl, sNode*));
+		case TYPE_STMT_INC:
+		case TYPE_STMT_DEC:
+		case TYPE_STMT_CASE:
+		case TYPE_STMT_RETURN:
+		case TYPE_STMT_WAIT:
+		case TYPE_STMT_EXPRESSION_STATEMENT:
 			result->statement->nodeList->push_back(va_arg(vl, sNode*));
 			break;
-		case TYPE_IF_ELSE_STATEMENT:
-		case TYPE_FOREACH_STATEMENT:
+		case TYPE_STMT_REGULAR_ASSIGN:
+		case TYPE_STMT_PLUS_ASSIGN:
+		case TYPE_STMT_MINUS_ASSIGN:
+		case TYPE_STMT_MULTIPLY_ASSIGN:
+		case TYPE_STMT_DIVIDE_ASSIGN:
+		case TYPE_STMT_MOD_ASSIGN:
+		case TYPE_STMT_SHIFT_LEFT_ASSIGN:
+		case TYPE_STMT_SHIFT_RIGHT_ASSIGN:
+		case TYPE_STMT_BIT_AND_ASSIGN:
+		case TYPE_STMT_BIT_EX_OR_ASSIGN:
+		case TYPE_STMT_BIT_OR_ASSIGN:
+		case TYPE_STMT_IF:
+		case TYPE_STMT_SWITCH:
+		case TYPE_STMT_WHILE:
+			result->statement->nodeList->push_back(va_arg(vl, sNode*));
+			result->statement->nodeList->push_back(va_arg(vl, sNode*));
+			break;
+		case TYPE_STMT_IF_ELSE:
+		case TYPE_STMT_FOREACH:
 			result->statement->nodeList->push_back(va_arg(vl, sNode*));
 			result->statement->nodeList->push_back(va_arg(vl, sNode*));
 			result->statement->nodeList->push_back(va_arg(vl, sNode*));
 			break;
-		case TYPE_FOR_STATEMENT:
+		case TYPE_STMT_FOR:
 			result->statement->nodeList->push_back(va_arg(vl, sNode*));
 			result->statement->nodeList->push_back(va_arg(vl, sNode*));
 			result->statement->nodeList->push_back(va_arg(vl, sNode*));
@@ -386,88 +340,3 @@ void FreeNode(sNode* node)
 {
 
 }
-
-/* function definitions */
-/*sFuncDefinition** funcDefList = 0;
-int curFuncDefCount = 0;
-
-void AddFuncDefinition(char* funcName)
-{
-	curFuncDefCount++;
-}*/
-
-/*sExpression* CreateExpression(EExpressionType type, ...)
-{
-	va_list vl;
-	va_start(vl, type);
-
-	sExpression* result = (sExpression*)malloc(sizeof(sExpression));
-	result->type = type;
-
-	switch (type)
-	{
-	case TYPE_EXPR_IDENTIFIER:
-	case TYPE_EXPR_STRING:
-	case TYPE_EXPR_LOC_STRING:
-	case TYPE_EXPR_HASH_STRING:
-	case TYPE_EXPR_UANIMREF_OP:
-		result->stringValue = va_arg(vl, char*);
-		break;
-	case TYPE_EXPR_INT:
-	case TYPE_EXPR_UMINUS_INT_OP:
-		result->intValue = va_arg(vl, int);
-		break;
-	case TYPE_EXPR_FLOAT:
-	case TYPE_EXPR_UMINUS_FLOAT_OP:
-		result->floatValue = va_arg(vl, float);
-		break;
-	case TYPE_EXPR_VECTOR:
-		result->expressionList = new std::vector<sExpression*>();
-		result->expressionList->push_back(va_arg(vl, sExpression*));
-		result->expressionList->push_back(va_arg(vl, sExpression*));
-		result->expressionList->push_back(va_arg(vl, sExpression*));
-		break;
-	case TYPE_EXPR_EMPTY_ARRAY:
-	case TYPE_EXPR_UNDEFINED:
-		break;
-	case TYPE_EXPR_FUNC_CALL_NOTHRD: // implement later
-		break;
-	case TYPE_EXPR_ARRAY_SUBSCRIPTING: // implement later
-		break;
-	case TYPE_EXPR_ELEMENT_SELECTION: // implement later
-		break;
-	case TYPE_EXPR_FUNC_REF: // implement later
-		break;
-	case TYPE_EXPR_LOGICAL_OR_OP:
-	case TYPE_EXPR_LOGICAL_AND_OP:
-	case TYPE_EXPR_BIT_OR_OP:
-	case TYPE_EXPR_BIT_EX_OR_OP:
-	case TYPE_EXPR_BIT_AND_OP:
-	case TYPE_EXPR_EQUALITY_OP:
-	case TYPE_EXPR_INEQUALITY_OP:
-	case TYPE_EXPR_LESS_OP:
-	case TYPE_EXPR_GREATER_OP:
-	case TYPE_EXPR_LESS_EQUAL_OP:
-	case TYPE_EXPR_GREATER_EQUAL_OP:
-	case TYPE_EXPR_SHIFT_LEFT_OP:
-	case TYPE_EXPR_SHIFT_RIGHT_OP:
-	case TYPE_EXPR_PLUS_OP:
-	case TYPE_EXPR_MINUS_OP:
-	case TYPE_EXPR_MULTIPLY_OP:
-	case TYPE_EXPR_DIVIDE_OP:
-	case TYPE_EXPR_MOD_OP:
-		result->expressionList = new std::vector<sExpression*>();
-		result->expressionList->push_back(va_arg(vl, sExpression*));
-		result->expressionList->push_back(va_arg(vl, sExpression*));
-		break;
-	case TYPE_EXPR_BOOL_NOT_OP:
-	case TYPE_EXPR_BOOL_COMPLEMENT_OP:
-		result->expressionList = new std::vector<sExpression*>();
-		result->expressionList->push_back(va_arg(vl, sExpression*));
-		break;
-	}
-
-	va_end(vl);
-
-	return result;
-}*/

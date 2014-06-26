@@ -36,6 +36,9 @@
     <ClInclude Include="bo2_gsc_file.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="vm_opcode_table.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">

@@ -13,6 +13,7 @@ P					[a-zA-Z_\\]
 #define fileno _fileno // <stdio.h>
 
 void comment(void);
+void skipdevblock(void);
 void ProcessEscapeSequences(char* stringValue);
 int another_opening_square_bracket(void);
 int next_closing_square_bracket(void);
@@ -24,6 +25,8 @@ int lineCount = 1;
 
 %%
 "/*"				{ comment(); }
+"/#"				{ if (!compiler->devMode) skipdevblock(); }
+"#/"				{ if (compiler->devMode) yyerror("unexpected devblock end"); }
 "//"[^\n]*			{ /* consume //-comment */; }
 
 "#include"			{ return(INCLUDE); }
@@ -163,8 +166,6 @@ int lineCount = 1;
 "=="			{ return(EQUALITY_OP); }
 "!="			{ return(INEQUALITY_OP); }
 "::"			{ return(REFERENCE_FUNC); }
-"/#"			{ return(DEVBLOCK_START); }
-"#/"			{ return(DEVBLOCK_END); }
 ";"				{ return(';'); }
 "{"				{ return('{'); }
 "}"				{ return('}'); }
@@ -218,6 +219,25 @@ void comment(void)
 		prev = c;
 	}
 	yyerror("unterminated comment");
+}
+
+void skipdevblock(void)
+{
+	char c, prev = 0;
+	
+#ifdef __cplusplus
+	while ((c = yyinput()) != 0)	/* (EOF maps to 0) */
+#else
+	while ((c = input()) != 0)		/* (EOF maps to 0) */
+#endif
+	{
+		if (c == '/' && prev == '#')
+			return;
+		else if (c == '\n')
+			lineCount++;
+		prev = c;
+	}
+	yyerror("unterminated devblock");
 }
 
 void ProcessEscapeSequences(char* stringValue)

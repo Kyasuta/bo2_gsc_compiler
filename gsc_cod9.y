@@ -28,25 +28,25 @@ void OnParsingComplete();
 /* other tokens */
 %token SHIFT_RIGHT_ASSIGN SHIFT_LEFT_ASSIGN PLUS_ASSIGN MINUS_ASSIGN MULTIPLY_ASSIGN DIVIDE_ASSIGN MOD_ASSIGN BIT_AND_ASSIGN BIT_EX_OR_ASSIGN BIT_OR_ASSIGN
 %token SHIFT_RIGHT_OP SHIFT_LEFT_OP INC_OP DEC_OP LOGICAL_AND_OP LOGICAL_OR_OP LESS_EQUAL_OP GREATER_EQUAL_OP EQUALITY_OP INEQUALITY_OP
-%token DEREFERENCE_FUNC_START REFERENCE_FUNC DEVBLOCK_START DEVBLOCK_END EMPTY_ARRAY
+%token DEREFERENCE_FUNC_START REFERENCE_FUNC EMPTY_ARRAY
 
 /* token & nonterminal types */
 %token <intValue> INT_LITERAL
 %token <floatValue> FLOAT_LITERAL
 %token <stringValue> IDENTIFIER PATH STRING_LITERAL LOC_STRING_LITERAL HASH_STRING_LITERAL
 
-%type <nodeValue> include using_animtree func_definition inc_dec_expression func_call_noptr func_call_ptr func_call_nothrd_expression func_call_thrd_expression
-%type <nodeValue> func_valid_object array_valid_name array_subscripting_expression element_selection_expression element_valid_selection func_ref_expression
-%type <nodeValue> expression parenthesized_expression assignment_expression operation_valid_lvalue statement labeled_statement jump_statement wait_statement
-%type <nodeValue> expression_statement compound_statement selection_statement iteration_statement for_init_expression for_cond_expression for_loop_expression
+%type <nodeValue> include using_animtree func_definition func_call_noptr func_call_ptr func_call_nothrd_expression func_call_thrd_expression func_valid_object
+%type <nodeValue> array_valid_name array_subscripting_expression element_selection_expression element_valid_selection func_ref_expression expression
+%type <nodeValue> parenthesized_expression statement inc_dec_statement assignment_statement operation_valid_lvalue labeled_statement jump_statement wait_statement
+%type <nodeValue> expression_statement compound_statement selection_statement iteration_statement for_init_statement for_cond_expression for_loop_statement
 
-%type <intValue> inc_dec
 %type <nodeArrayValue> source_code parameter_list_opt argument_list_opt statement_list
 
 /* precedences (shift/reduce conflict resolving) */
 %nonassoc IFX
 %nonassoc ELSE
 
+%right '?' ':'
 %left LOGICAL_OR_OP
 %left LOGICAL_AND_OP
 %left '|'
@@ -97,28 +97,16 @@ parameter_list_opt
 	| parameter_list_opt ',' IDENTIFIER							{ $$ = $1; $$->push_back(IdentifierNode($3)); }
 	;
 
-/* add func_call_expression inc_dec ? */
-inc_dec_expression
-	: IDENTIFIER inc_dec										{ $$ = AllocIncDecExpression(IdentifierNode($1), $2); }
-	| array_subscripting_expression inc_dec						{ $$ = AllocIncDecExpression($1, $2); }
-	| element_selection_expression inc_dec						{ $$ = AllocIncDecExpression($1, $2); }
-	;
-
-inc_dec
-	: INC_OP													{ $$ = 0; }
-	| DEC_OP													{ $$ = 1; }
-	;
-
 /* non-pointer function call */
 func_call_noptr
-	: IDENTIFIER '(' argument_list_opt ')'									{ $$ = AllocFuncCall(IdentifierNode($1), 0, $3, 0, 0, 0, 0, 0); }
-	| PATH REFERENCE_FUNC IDENTIFIER '(' argument_list_opt ')'				{ $$ = AllocFuncCall(IdentifierNode($3), PathNode($1), $5, 0, 0, 0, 0, 0); }
-	| IDENTIFIER REFERENCE_FUNC IDENTIFIER '(' argument_list_opt ')'		{ $$ = AllocFuncCall(IdentifierNode($3), IdentifierNode($1), $5, 0, 0, 0, 0, 0); }
+	: IDENTIFIER '(' argument_list_opt ')'									{ $$ = AllocFuncCallExpression(IdentifierNode($1), 0, $3, 0, 0, 0, 0, 0); }
+	| PATH REFERENCE_FUNC IDENTIFIER '(' argument_list_opt ')'				{ $$ = AllocFuncCallExpression(IdentifierNode($3), PathNode($1), $5, 0, 0, 0, 0, 0); }
+	| IDENTIFIER REFERENCE_FUNC IDENTIFIER '(' argument_list_opt ')'		{ $$ = AllocFuncCallExpression(IdentifierNode($3), IdentifierNode($1), $5, 0, 0, 0, 0, 0); }
 	;
 
 /* pointer function call */
 func_call_ptr
-	: DEREFERENCE_FUNC_START expression ']' ']' '(' argument_list_opt ')'	{ $$ = AllocFuncCall(0, 0, $6, 1, $2, 0, 0, 0); }
+	: DEREFERENCE_FUNC_START expression ']' ']' '(' argument_list_opt ')'	{ $$ = AllocFuncCallExpression(0, 0, $6, 1, $2, 0, 0, 0); }
 	;
 
 argument_list_opt
@@ -129,18 +117,18 @@ argument_list_opt
 
 /* non-thread function call */
 func_call_nothrd_expression
-	: func_call_noptr											{ $$ = $1; $$->funcCall->isThread = 0; }
-	| func_call_ptr												{ $$ = $1; $$->funcCall->isThread = 0; }
-	| func_valid_object func_call_noptr							{ $$ = $2; $$->funcCall->isThread = 0; $$->funcCall->isMethod = 1; $$->funcCall->methodObject = $1; }
-	| func_valid_object func_call_ptr							{ $$ = $2; $$->funcCall->isThread = 0; $$->funcCall->isMethod = 1; $$->funcCall->methodObject = $1; }
+	: func_call_noptr											{ $$ = $1; $$->funcCallExpression->isThread = 0; }
+	| func_call_ptr												{ $$ = $1; $$->funcCallExpression->isThread = 0; }
+	| func_valid_object func_call_noptr							{ $$ = $2; $$->funcCallExpression->isThread = 0; $$->funcCallExpression->isMethod = 1; $$->funcCallExpression->methodObject = $1; }
+	| func_valid_object func_call_ptr							{ $$ = $2; $$->funcCallExpression->isThread = 0; $$->funcCallExpression->isMethod = 1; $$->funcCallExpression->methodObject = $1; }
 	;
 
 /* thread function call */
 func_call_thrd_expression
-	: THREAD func_call_noptr									{ $$ = $2; $$->funcCall->isThread = 1; }
-	| THREAD func_call_ptr										{ $$ = $2; $$->funcCall->isThread = 1; }
-	| func_valid_object THREAD func_call_noptr					{ $$ = $3; $$->funcCall->isThread = 1; $$->funcCall->isMethod = 1; $$->funcCall->methodObject = $1; }
-	| func_valid_object THREAD func_call_ptr					{ $$ = $3; $$->funcCall->isThread = 1; $$->funcCall->isMethod = 1; $$->funcCall->methodObject = $1; }
+	: THREAD func_call_noptr									{ $$ = $2; $$->funcCallExpression->isThread = 1; }
+	| THREAD func_call_ptr										{ $$ = $2; $$->funcCallExpression->isThread = 1; }
+	| func_valid_object THREAD func_call_noptr					{ $$ = $3; $$->funcCallExpression->isThread = 1; $$->funcCallExpression->isMethod = 1; $$->funcCallExpression->methodObject = $1; }
+	| func_valid_object THREAD func_call_ptr					{ $$ = $3; $$->funcCallExpression->isThread = 1; $$->funcCallExpression->isMethod = 1; $$->funcCallExpression->methodObject = $1; }
 	;
 
 /* things that are syntactically valid to be a function's method object */
@@ -167,7 +155,10 @@ array_valid_name
 
 /* identifier might be a keyword, size */
 element_selection_expression
-	: element_valid_selection '.' IDENTIFIER					{ $$ = AllocElementSelectionExpression($1, IdentifierNode($3)); }
+	: element_valid_selection '.' IDENTIFIER					{
+																	int isSize = !strcmp($3, "size");
+																	$$ = AllocElementSelectionExpression(isSize, $1, isSize ? 0 : IdentifierNode($3));
+																}
 	;
 
 /* things that are syntactically valid to be selected through "." */
@@ -199,6 +190,7 @@ expression
 	| array_subscripting_expression								{ $$ = AllocExpression(TYPE_EXPR_ARRAY_SUBSCRIPTING, $1); }
 	| element_selection_expression								{ $$ = AllocExpression(TYPE_EXPR_ELEMENT_SELECTION, $1); }
 	| func_ref_expression										{ $$ = AllocExpression(TYPE_EXPR_FUNC_REF, $1); }
+	| expression '?' expression ':' expression					{ $$ = AllocExpression(TYPE_EXPR_TERNARY_OP, $1, $3, $5); }
 	| expression LOGICAL_OR_OP expression						{ $$ = AllocExpression(TYPE_EXPR_LOGICAL_OR_OP, $1, $3); }
 	| expression LOGICAL_AND_OP expression						{ $$ = AllocExpression(TYPE_EXPR_LOGICAL_AND_OP, $1, $3); }
 	| expression '|' expression									{ $$ = AllocExpression(TYPE_EXPR_BIT_OR_OP, $1, $3); }
@@ -219,9 +211,9 @@ expression
 	| expression '%' expression									{ $$ = AllocExpression(TYPE_EXPR_MOD_OP, $1, $3); }
 	| '!' expression											{ $$ = AllocExpression(TYPE_EXPR_BOOL_NOT_OP, $2); }
 	| '~' expression											{ $$ = AllocExpression(TYPE_EXPR_BOOL_COMPLEMENT_OP, $2); }
-	| '-' INT_LITERAL %prec UNARY_MINUS							{ $$ = AllocExpression(TYPE_EXPR_UMINUS_INT_OP, $2); }
-	| '-' FLOAT_LITERAL %prec UNARY_MINUS						{ $$ = AllocExpression(TYPE_EXPR_UMINUS_FLOAT_OP, $2); }
-	| '%' IDENTIFIER %prec UNARY_ANIMREF						{ $$ = AllocExpression(TYPE_EXPR_UANIMREF_OP, $2); }
+	| '-' INT_LITERAL %prec UNARY_MINUS							{ $$ = AllocExpression(TYPE_EXPR_INT, IntNode(-$2)); }
+	| '-' FLOAT_LITERAL %prec UNARY_MINUS						{ $$ = AllocExpression(TYPE_EXPR_FLOAT, FloatNode(-$2)); }
+	| '%' IDENTIFIER %prec UNARY_ANIMREF						{ $$ = AllocExpression(TYPE_EXPR_UANIMREF_OP, IdentifierNode($2)); }
 	| parenthesized_expression									{ $$ = $1; }
 	;
 
@@ -229,26 +221,7 @@ parenthesized_expression
 	: '(' expression ')'										{ $$ = $2; }
 	;
 
-assignment_expression
-	: operation_valid_lvalue '=' expression						{ $$ = AllocAssignmentExpression(TYPE_REGULAR_ASSIGN, $1, $3); }
-	| operation_valid_lvalue PLUS_ASSIGN expression				{ $$ = AllocAssignmentExpression(TYPE_PLUS_ASSIGN, $1, $3); }
-	| operation_valid_lvalue MINUS_ASSIGN expression			{ $$ = AllocAssignmentExpression(TYPE_MINUS_ASSIGN, $1, $3); }
-	| operation_valid_lvalue MULTIPLY_ASSIGN expression			{ $$ = AllocAssignmentExpression(TYPE_MULTIPLY_ASSIGN, $1, $3); }
-	| operation_valid_lvalue DIVIDE_ASSIGN expression			{ $$ = AllocAssignmentExpression(TYPE_DIVIDE_ASSIGN, $1, $3); }
-	| operation_valid_lvalue MOD_ASSIGN expression				{ $$ = AllocAssignmentExpression(TYPE_MOD_ASSIGN, $1, $3); }
-	| operation_valid_lvalue SHIFT_LEFT_ASSIGN expression		{ $$ = AllocAssignmentExpression(TYPE_SHIFT_LEFT_ASSIGN, $1, $3); }
-	| operation_valid_lvalue SHIFT_RIGHT_ASSIGN expression		{ $$ = AllocAssignmentExpression(TYPE_SHIFT_RIGHT_ASSIGN, $1, $3); }
-	| operation_valid_lvalue BIT_AND_ASSIGN expression			{ $$ = AllocAssignmentExpression(TYPE_BIT_AND_ASSIGN, $1, $3); }
-	| operation_valid_lvalue BIT_EX_OR_ASSIGN expression		{ $$ = AllocAssignmentExpression(TYPE_BIT_EX_OR_ASSIGN, $1, $3); }
-	| operation_valid_lvalue BIT_OR_ASSIGN expression			{ $$ = AllocAssignmentExpression(TYPE_BIT_OR_ASSIGN, $1, $3); }
-	;
-
-operation_valid_lvalue
-	: IDENTIFIER												{ $$ = IdentifierNode($1); }
-	| array_subscripting_expression								{ $$ = $1; }
-	| element_selection_expression								{ $$ = $1; }
-	;
-
+/* inc_dec_statement and assignment_statement are part of expression_statement or iteration_statement (for loop) only */
 statement
 	: labeled_statement											{ $$ = $1; }
 	| jump_statement											{ $$ = $1; }
@@ -259,36 +232,65 @@ statement
 	| iteration_statement										{ $$ = $1; }
 	;
 
+inc_dec_statement
+	: IDENTIFIER INC_OP											{ $$ = AllocStatement(TYPE_STMT_INC, IdentifierNode($1)); }
+	| IDENTIFIER DEC_OP											{ $$ = AllocStatement(TYPE_STMT_DEC, IdentifierNode($1)); }
+	| array_subscripting_expression INC_OP						{ $$ = AllocStatement(TYPE_STMT_INC, $1); }
+	| array_subscripting_expression DEC_OP						{ $$ = AllocStatement(TYPE_STMT_DEC, $1); }
+	| element_selection_expression INC_OP						{ $$ = AllocStatement(TYPE_STMT_INC, $1); }
+	| element_selection_expression DEC_OP						{ $$ = AllocStatement(TYPE_STMT_DEC, $1); }
+	;
+
+assignment_statement
+	: operation_valid_lvalue '=' expression						{ $$ = AllocStatement(TYPE_STMT_REGULAR_ASSIGN, $1, $3); }
+	| operation_valid_lvalue PLUS_ASSIGN expression				{ $$ = AllocStatement(TYPE_STMT_PLUS_ASSIGN, $1, $3); }
+	| operation_valid_lvalue MINUS_ASSIGN expression			{ $$ = AllocStatement(TYPE_STMT_MINUS_ASSIGN, $1, $3); }
+	| operation_valid_lvalue MULTIPLY_ASSIGN expression			{ $$ = AllocStatement(TYPE_STMT_MULTIPLY_ASSIGN, $1, $3); }
+	| operation_valid_lvalue DIVIDE_ASSIGN expression			{ $$ = AllocStatement(TYPE_STMT_DIVIDE_ASSIGN, $1, $3); }
+	| operation_valid_lvalue MOD_ASSIGN expression				{ $$ = AllocStatement(TYPE_STMT_MOD_ASSIGN, $1, $3); }
+	| operation_valid_lvalue SHIFT_LEFT_ASSIGN expression		{ $$ = AllocStatement(TYPE_STMT_SHIFT_LEFT_ASSIGN, $1, $3); }
+	| operation_valid_lvalue SHIFT_RIGHT_ASSIGN expression		{ $$ = AllocStatement(TYPE_STMT_SHIFT_RIGHT_ASSIGN, $1, $3); }
+	| operation_valid_lvalue BIT_AND_ASSIGN expression			{ $$ = AllocStatement(TYPE_STMT_BIT_AND_ASSIGN, $1, $3); }
+	| operation_valid_lvalue BIT_EX_OR_ASSIGN expression		{ $$ = AllocStatement(TYPE_STMT_BIT_EX_OR_ASSIGN, $1, $3); }
+	| operation_valid_lvalue BIT_OR_ASSIGN expression			{ $$ = AllocStatement(TYPE_STMT_BIT_OR_ASSIGN, $1, $3); }
+	;
+
+operation_valid_lvalue
+	: IDENTIFIER												{ $$ = IdentifierNode($1); }
+	| array_subscripting_expression								{ $$ = $1; }
+	| element_selection_expression								{ $$ = $1; }
+	;
+
 labeled_statement
-	: CASE INT_LITERAL ':'										{ $$ = AllocStatement(TYPE_CASE_STATEMENT, IntNode($2)); }
-	| CASE STRING_LITERAL ':'									{ $$ = AllocStatement(TYPE_CASE_STATEMENT, StringNode($2)); }
-	| DEFAULT ':'												{ $$ = AllocStatement(TYPE_DEFAULT_STATEMENT); }
+	: CASE INT_LITERAL ':'										{ $$ = AllocStatement(TYPE_STMT_CASE, IntNode($2)); }
+	| CASE STRING_LITERAL ':'									{ $$ = AllocStatement(TYPE_STMT_CASE, StringNode($2)); }
+	| DEFAULT ':'												{ $$ = AllocStatement(TYPE_STMT_DEFAULT); }
 	;
 
 jump_statement
-	: CONTINUE ';'												{ $$ = AllocStatement(TYPE_CONTINUE_STATEMENT); }
-	| BREAK ';'													{ $$ = AllocStatement(TYPE_BREAK_STATEMENT); }
-	| RETURN ';'												{ $$ = AllocStatement(TYPE_RETURN_STATEMENT, 0); }
-	| RETURN expression ';'										{ $$ = AllocStatement(TYPE_RETURN_STATEMENT, $2); }
+	: CONTINUE ';'												{ $$ = AllocStatement(TYPE_STMT_CONTINUE); }
+	| BREAK ';'													{ $$ = AllocStatement(TYPE_STMT_BREAK); }
+	| RETURN ';'												{ $$ = AllocStatement(TYPE_STMT_RETURN, 0); }
+	| RETURN expression ';'										{ $$ = AllocStatement(TYPE_STMT_RETURN, $2); }
 	;
 
 wait_statement
-	: WAIT expression ';'										{ $$ = AllocStatement(TYPE_WAIT_EXPR_STATEMENT, $2); }
-	| WAITTILLFRAMEEND ';'										{ $$ = AllocStatement(TYPE_WAITTILLFRAMEEND_STATEMENT); }
+	: WAIT expression ';'										{ $$ = AllocStatement(TYPE_STMT_WAIT, $2); }
+	| WAITTILLFRAMEEND ';'										{ $$ = AllocStatement(TYPE_STMT_WAITTILLFRAMEEND); }
 	;
 
-/* not putting expression here because it doesn't do anything */
+/* inc_and_statement and assignment_statement are an exception */
 expression_statement
-	: ';'														{ $$ = AllocStatement(TYPE_EXPRESSION_STATEMENT, 0); }
-	| inc_dec_expression ';'									{ $$ = AllocStatement(TYPE_EXPRESSION_STATEMENT, $1); }
-	| func_call_nothrd_expression ';'							{ $$ = AllocStatement(TYPE_EXPRESSION_STATEMENT, $1); }
-	| func_call_thrd_expression ';'								{ $$ = AllocStatement(TYPE_EXPRESSION_STATEMENT, $1); }
-	| assignment_expression ';'									{ $$ = AllocStatement(TYPE_EXPRESSION_STATEMENT, $1); }
+	: ';'														{ $$ = AllocStatement(TYPE_STMT_EXPRESSION_STATEMENT, 0); }
+	| inc_dec_statement ';'										{ $$ = AllocStatement(TYPE_STMT_EXPRESSION_STATEMENT, $1); }
+	| assignment_statement ';'									{ $$ = AllocStatement(TYPE_STMT_EXPRESSION_STATEMENT, $1); }
+	| func_call_nothrd_expression ';'							{ $$ = AllocStatement(TYPE_STMT_EXPRESSION_STATEMENT, $1); }
+	| func_call_thrd_expression ';'								{ $$ = AllocStatement(TYPE_STMT_EXPRESSION_STATEMENT, $1); }
 	;
 
 compound_statement
-	: '{' '}'													{ $$ = AllocStatement(TYPE_COMPOUND_STATEMENT, 0); }
-	| '{' statement_list '}'									{ $$ = AllocStatement(TYPE_COMPOUND_STATEMENT, $2); }
+	: '{' '}'													{ $$ = AllocStatement(TYPE_STMT_COMPOUND, 0); }
+	| '{' statement_list '}'									{ $$ = AllocStatement(TYPE_STMT_COMPOUND, $2); }
 	;
 
 statement_list
@@ -297,20 +299,20 @@ statement_list
 	;
 
 selection_statement
-	: IF '(' expression ')' statement %prec IFX					{ $$ = AllocStatement(TYPE_IF_STATEMENT, $3, $5); }
-	| IF '(' expression ')' statement ELSE statement			{ $$ = AllocStatement(TYPE_IF_ELSE_STATEMENT, $3, $5, $7); }
-	| SWITCH '(' expression ')' compound_statement				{ $$ = AllocStatement(TYPE_SWITCH_STATEMENT, $3, $5); }
+	: IF '(' expression ')' statement %prec IFX					{ $$ = AllocStatement(TYPE_STMT_IF, $3, $5); }
+	| IF '(' expression ')' statement ELSE statement			{ $$ = AllocStatement(TYPE_STMT_IF_ELSE, $3, $5, $7); }
+	| SWITCH '(' expression ')' compound_statement				{ $$ = AllocStatement(TYPE_STMT_SWITCH, $3, $5); }
 	;
 
 iteration_statement
-	: FOR '(' for_init_expression ';' for_cond_expression ';' for_loop_expression ')' statement		{ $$ = AllocStatement(TYPE_FOR_STATEMENT, $3, $5, $7, $9); }
-	| WHILE '(' expression ')' statement						{ $$ = AllocStatement(TYPE_WHILE_STATEMENT, $3, $5); }
-	| FOREACH '(' IDENTIFIER IN expression ')' statement		{ $$ = AllocStatement(TYPE_FOREACH_STATEMENT, $3, $5, $7); }
+	: FOR '(' for_init_statement ';' for_cond_expression ';' for_loop_statement ')' statement		{ $$ = AllocStatement(TYPE_STMT_FOR, $3, $5, $7, $9); }
+	| WHILE '(' expression ')' statement						{ $$ = AllocStatement(TYPE_STMT_WHILE, $3, $5); }
+	| FOREACH '(' IDENTIFIER IN expression ')' statement		{ $$ = AllocStatement(TYPE_STMT_FOREACH, $3, $5, $7); }
 	;
 
-for_init_expression
+for_init_statement
 	: /* empty */												{ $$ = 0; }
-	| assignment_expression										{ $$ = $1; }
+	| assignment_statement										{ $$ = $1; }
 	;
 
 for_cond_expression
@@ -318,10 +320,10 @@ for_cond_expression
 	| expression												{ $$ = $1; }
 	;
 
-for_loop_expression
+for_loop_statement
 	: /* empty */												{ $$ = 0; }
-	| inc_dec_expression										{ $$ = $1; }
-	| assignment_expression										{ $$ = $1; }
+	| inc_dec_statement											{ $$ = $1; }
+	| assignment_statement										{ $$ = $1; }
 	;
 
 %%
